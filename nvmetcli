@@ -283,6 +283,11 @@ class UINamespaceNode(UINode):
             info.append("nguid=" + ns_nguid)
         if self.cfnode.grpid != 0:
             info.append("grpid=" + str(self.cfnode.grpid))
+        try:
+            resv_enable = self.cfnode.get_attr("resv", "enable")
+            info.append("resv_enable=" + str(resv_enable))
+        except nvme.nvme.CFSError:
+            pass
         info.append("enabled" if self.cfnode.get_enable() else "disabled")
         ns_enabled = self.cfnode.get_enable()
         return (", ".join(info), True if ns_enabled == 1 else ns_enabled)
