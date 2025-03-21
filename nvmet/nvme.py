@@ -22,6 +22,8 @@ import os
 import stat
 import uuid
 import json
+import subprocess
+import shlex
 from glob import iglob as glob
 from six import iteritems, moves
 
@@ -256,9 +258,22 @@ class Root(CFSNode):
             # Try the ctypes library included with the libkmod itself.
             try:
                 import kmod
-                kmod.Kmod().modprobe(modname)
-            except Exception as e:
-                pass
+
+                try:
+                    kmod.Kmod().modprobe(modname)
+                except Exception as e:
+                    pass
+            except ImportError:
+                # Try the binary specified in /proc
+                try:
+                    modprobe_cmd = None
+                    with open('/proc/sys/kernel/modprobe', 'r') as f:
+                        modprobe_cmd = f.read()
+                    if modprobe_cmd:
+                        subprocess.run(shlex.split(modprobe_cmd) + [modname],
+                                       check=False)
+                except Exception as e:
+                    pass
 
     def _list_subsystems(self):
         self._check_self()
