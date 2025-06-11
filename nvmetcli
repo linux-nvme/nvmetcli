@@ -166,6 +166,8 @@ class UISubsystemNode(UINode):
         self._children = set([])
         UINamespacesNode(self)
         UIAllowedHostsNode(self)
+        if self.cfnode.has_passthru():
+            UIPassthruNode(self)
 
     def summary(self):
         info = []
@@ -175,6 +177,82 @@ class UISubsystemNode(UINode):
         info.append("serial=" + self.cfnode.get_attr("attr", "serial"))
         return (", ".join(info), True)
 
+class UIPassthruNode(UINode):
+    ui_desc_device = {
+        'path' : ('string', 'Passthru device path')
+    }
+
+    def __init__(self, parent):
+        passthru = nvme.Passthru(parent.cfnode)
+        UINode.__init__(self, 'passthru', parent, passthru)
+
+    def refresh(self):
+        self._children = set([])
+
+    def ui_command_enable(self):
+        if self.cfnode.get_enable():
+            self.shell.log.info("The passthru is already enabled.")
+        else:
+            try:
+                self.cfnode.set_enable(1)
+                self.shell.log.info("The passthru has been enabled.")
+            except Exception as e:
+                raise configshell.ExecutionError(
+                    "The passthru could not be enabled.")
+
+    def ui_command_disable(self):
+        if not self.cfnode.get_enable():
+            self.shell.log.info("The passthru is already disabled.")
+        else:
+            try:
+                self.cfnode.set_enable(0)
+                self.shell.log.info("The passthru has been disabled.")
+            except Exception as e:
+                raise configshell.ExecutionError(
+                    "The passthru could not be disabled.")
+
+    def ui_command_clear_ids(self, clear):
+        '''
+        If I{clear} is set to non-zero then clears the passthru namespace
+        unique identifiers EUI/GUID/UUID.
+        '''
+        try:
+            self.cfnode.set_clear_ids(clear)
+        except Exception as e:
+            raise configshell.ExecutionError(
+                "Failed to set clear_ids for this passthru target.")
+
+    def ui_command_admin_timeout(self, timeout):
+        '''
+        Sets the timeout of admin passthru command.
+        '''
+        try:
+            self.cfnode.set_admin_timeout(timeout)
+        except Exception as e:
+            raise configshell.ExecutionError(
+                "Failed to set the admin passthru command timeout.")
+
+    def ui_command_io_timeout(self, timeout):
+        '''
+        Sets the timeout of IO passthru command.
+        '''
+        try:
+            self.cfnode.set_io_timeout(timeout)
+        except Exception as e:
+            raise configshell.ExecutionError(
+                "Failed to set the IO passthru command timeout.")
+
+    def summary(self):
+        info = []
+        info.append("path=" + self.cfnode.get_attr("device", "path"))
+        if self.cfnode.ids != 0:
+            info.append("clear_ids=" + str(self.cfnode.ids))
+        if self.cfnode.admin_timeout != 0:
+            info.append("admin_timeout=" + str(self.cfnode.admin_timeout))
+        if self.cfnode.io_timeout != 0:
+            info.append("io_timeout=" + str(self.cfnode.io_timeout))
+        info.append("enabled" if self.cfnode.get_enable() else "disabled")
+        return (", ".join(info), True)
 
 class UINamespacesNode(UINode):
     def __init__(self, parent):

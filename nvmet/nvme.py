@@ -477,6 +477,13 @@ class Subsystem(CFSNode):
     namespaces = property(_list_namespaces,
                           doc="Get the list of Namespaces for the Subsystem.")
 
+    def _get_passthru(self):
+        self._check_self()
+        return Passthru(self)
+
+    passthru = property(_get_passthru,
+                        doc="Get the passthru node for the subsystem")
+
     def _list_allowed_hosts(self):
         return [os.path.basename(name)
                 for name in os.listdir("%s/allowed_hosts/" % self._path)]
@@ -503,6 +510,9 @@ class Subsystem(CFSNode):
         except Exception as e:
             raise CFSError("Could not unlink %s in configFS: %s" % (nqn, e))
 
+    def has_passthru(self):
+        return os.path.isdir(os.path.join(self.path, "passthru"))
+
     @classmethod
     def setup(cls, t, err_func):
         '''
@@ -525,6 +535,8 @@ class Subsystem(CFSNode):
             Namespace.setup(s, ns, err_func)
         for h in t.get('allowed_hosts', []):
             s.add_allowed_host(h)
+        for pt in t.get('passthru', []):
+            Passthru.setup(s, pt, err_func)
 
         s._setup_attrs(t, err_func)
 
@@ -533,6 +545,8 @@ class Subsystem(CFSNode):
         d['nqn'] = self.nqn
         d['namespaces'] = [ns.dump() for ns in self.namespaces]
         d['allowed_hosts'] = self.allowed_hosts
+        if self.has_passthru():
+            d['passthru'] = [self.passthru.dump()]
         return d
 
 
@@ -644,6 +658,98 @@ class Namespace(CFSNode):
         d['ana_grpid'] = self.grpid
         return d
 
+class Passthru(CFSNode):
+    '''
+    This is an interface to a NVMe passthru in ConfigFS.
+    '''
+
+    def __init__(self, subsystem):
+        '''
+        @param subsystem: The parent Subsystem object.
+        @return: A Passthru object.
+        '''
+        super(Passthru, self).__init__()
+        self._path = "%s/passthru" % (subsystem.path)
+        self.attr_groups = ['device']
+
+    def _get_clear_ids(self):
+        self._check_self()
+        path = "%s/clear_ids" % self.path
+        _ids = 0
+        if os.path.isfile(path):
+            with open(path, 'r') as file_fd:
+                _ids = int(file_fd.read().strip())
+        return _ids
+
+    ids = property(_get_clear_ids,
+                   doc = "Get the passthru namespace clear_ids attribute.")
+
+    def set_clear_ids(self, clear):
+        self._check_self()
+        path = "%s/clear_ids" % self.path
+        if os.path.isfile(path):
+            with open(path, 'w') as file_fd:
+                file_fd.write(str(clear))
+
+    def _get_admin_timeout(self):
+        self._check_self()
+        path = "%s/admin_timeout" % self.path
+        _timeout = 0
+        if os.path.isfile(path):
+            with open(path, 'r') as file_fd:
+                _timeout = int(file_fd.read().strip())
+        return _timeout
+
+    admin_timeout = property(_get_admin_timeout,
+                   doc = "Get the passthru admin command timeout.")
+
+    def set_admin_timeout(self, timeout):
+        self._check_self()
+        path = "%s/admin_timeout" % self.path
+        if os.path.isfile(path):
+            with open(path, 'w') as file_fd:
+                file_fd.write(str(timeout))
+
+    def _get_io_timeout(self):
+        self._check_self()
+        path = "%s/io_timeout" % self.path
+        _timeout = 0
+        if os.path.isfile(path):
+            with open(path, 'r') as file_fd:
+                _timeout = int(file_fd.read().strip())
+        return _timeout
+
+    io_timeout = property(_get_io_timeout,
+                   doc = "Get the passthru IO command timeout.")
+
+    def set_io_timeout(self, timeout):
+        self._check_self()
+        path = "%s/io_timeout" % self.path
+        if os.path.isfile(path):
+            with open(path, 'w') as file_fd:
+                file_fd.write(str(timeout))
+
+    @classmethod
+    def setup(cls, subsys, p, err_func):
+        try:
+            pt = Passthru(subsys)
+        except CFSError as e:
+            err_func("Could not create Passthru object: %s" % e)
+            return
+        pt._setup_attrs(p, err_func)
+        if 'clear_ids' in p:
+            pt.set_clear_ids(int(p['clear_ids']))
+        if 'admin_timeout' in p:
+            pt.set_admin_timeout(int(p['admin_timeout']))
+        if 'io_timeout' in p:
+            pt.set_io_timeout(int(p['io_timeout']))
+
+    def dump(self):
+        d = super(Passthru, self).dump()
+        d['clear_ids'] = self.ids
+        d['admin_timeout'] = self.admin_timeout
+        d['io_timeout'] = self.io_timeout
+        return d
 
 class Port(CFSNode):
     '''
