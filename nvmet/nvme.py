@@ -25,7 +25,6 @@ import json
 import subprocess
 import shlex
 from glob import iglob as glob
-from six import iteritems, moves
 
 DEFAULT_SAVE_FILE = '/etc/nvmet/config.json'
 
@@ -222,7 +221,7 @@ class CFSNode(object):
 
     def _setup_attrs(self, attr_dict, err_func):
         for group in self.attr_groups:
-            for name, value in iteritems(attr_dict.get(group, {})):
+            for name, value in attr_dict.get(group, {}).items():
                 try:
                     self.set_attr(group, name, value)
                 except CFSError as e:
@@ -585,7 +584,7 @@ class Namespace(CFSNode):
                 raise CFSError("Need NSID for lookup")
 
             nsids = [n.nsid for n in subsystem.namespaces]
-            for index in moves.xrange(1, self.MAX_NSID + 1):
+            for index in range(1, self.MAX_NSID + 1):
                 if index not in nsids:
                     nsid = index
                     break
@@ -937,7 +936,7 @@ class ANAGroup(CFSNode):
                 raise CFSError("Need grpid for lookup")
 
             grpids = [n.grpid for n in port.ana_groups]
-            for index in moves.xrange(2, self.MAX_GRPID + 1):
+            for index in range(2, self.MAX_GRPID + 1):
                 if index not in grpids:
                     grpid = index
                     break
