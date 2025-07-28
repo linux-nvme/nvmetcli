@@ -764,7 +764,8 @@ def usage():
     print("syntax: %s save [file_to_save_to]" % sys.argv[0])
     print("        %s restore [file_to_restore_from]" % sys.argv[0])
     print("        %s clear" % sys.argv[0])
-    print("        %s ls" % sys.argv[0])
+    print("        %s --help  (Print this information)" % sys.argv[0])
+    print("        %s <CMD>   (Run shell command and exit)" % sys.argv[0])
     sys.exit(-1)
 
 
@@ -801,14 +802,14 @@ def clear(unused):
     nvme.Root().clear_existing()
 
 
-def ls(unused):
+def execute_cmd(cmd):
     shell = configshell.ConfigShell('~/.nvmetcli')
     UIRootNode(shell)
-    shell.run_cmdline("ls")
+    shell.run_cmdline(cmd)
     sys.exit(0)
 
 
-funcs = dict(save=save, restore=restore, clear=clear, ls=ls)
+funcs = dict(save=save, restore=restore, clear=clear)
 
 
 def main():
@@ -816,23 +817,23 @@ def main():
         print("%s: must run as root." % sys.argv[0], file=sys.stderr)
         sys.exit(-1)
 
-    if len(sys.argv) > 3:
-        usage()
-
-    if len(sys.argv) == 2 or len(sys.argv) == 3:
+    if len(sys.argv) > 1:
         if sys.argv[1] == "--help":
             usage()
 
-        if sys.argv[1] not in funcs.keys():
-            usage()
+        if sys.argv[1] in funcs.keys():
+            if len(sys.argv) > 3:
+                usage()
+            if len(sys.argv) == 3:
+                savefile = sys.argv[2]
+            else:
+                savefile = None
 
-        if len(sys.argv) == 3:
-            savefile = sys.argv[2]
+            funcs[sys.argv[1]](savefile)
+            return
         else:
-            savefile = None
-
-        funcs[sys.argv[1]](savefile)
-        return
+            concat_args = ' '.join(sys.argv[1:])
+            execute_cmd(concat_args)
 
     try:
         shell = configshell.ConfigShell('~/.nvmetcli')
