@@ -22,7 +22,7 @@ from __future__ import print_function
 
 import os
 import sys
-import configshell_fb as configshell
+import configshell
 import nvmet as nvme
 import errno
 from string import hexdigits
