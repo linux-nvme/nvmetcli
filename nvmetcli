@@ -33,9 +33,9 @@ def ngiud_set(nguid):
     return any(c in hexdigits and c != '0' for c in nguid)
 
 
-class UINode(configshell.node.ConfigNode):
+class UINode(configshell.ConfigNode):
     def __init__(self, name, parent=None, cfnode=None, shell=None):
-        configshell.node.ConfigNode.__init__(self, name, parent, shell)
+        configshell.ConfigNode.__init__(self, name, parent, shell)
         self.cfnode = cfnode
         if self.cfnode:
             if self.cfnode.attr_groups:
@@ -798,7 +798,7 @@ def clear(unused):
 
 
 def ls(unused):
-    shell = configshell.shell.ConfigShell('~/.nvmetcli')
+    shell = configshell.ConfigShell('~/.nvmetcli')
     UIRootNode(shell)
     shell.run_cmdline("ls")
     sys.exit(0)
@@ -831,7 +831,7 @@ def main():
         return
 
     try:
-        shell = configshell.shell.ConfigShell('~/.nvmetcli')
+        shell = configshell.ConfigShell('~/.nvmetcli')
         UIRootNode(shell)
     except Exception as msg:
         shell.log.error(str(msg))
