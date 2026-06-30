@@ -1,0 +1,38 @@
+---
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright (c) 2026 SUSE Software Solutions
+#
+# Authors: Daniel Wagner <dwagner@suse.de>
+
+name: Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  testsuite:
+    runs-on: arc-vm-nvmetcli-cph
+    timeout-minutes: 1200
+    steps:
+      - name: Checkout blktests-ci
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: linux-blktests/blktests-ci
+
+      - name: Run in VM
+        uses: ./.github/actions/kubevirt-action
+        with:
+          container_disk_image: "quay.io/containerdisks/fedora:44"
+          host_devices: "nvme-wdc-zn540"
+          run_cmds: |
+            sudo dnf install -y git make python3-configshell python3-kmod \
+                                python3-devel python3-nose2 systemd-units
+
+            git clone https://github.com/${{ github.repository }} nvmetcli
+            cd nvmetcli
+            git checkout ${{ github.sha }}
+
+            sudo modprobe nvmet
+            sudo make test
