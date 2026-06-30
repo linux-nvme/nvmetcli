@@ -15,6 +15,21 @@ jobs:
   testsuite:
     runs-on: arc-vm-nvmetcli-cph
     timeout-minutes: 1200
+
+    env:
+      CHECKOUT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        container:
+          - ghcr.io/linux-nvme/nvmetcli-debian-containerdisk:next
+          - ghcr.io/linux-nvme/nvmetcli-fedora-containerdisk:next
+          - ghcr.io/linux-nvme/nvmetcli-tumbleweed-containerdisk:next
+
+    name: >
+      testsuite (${{ matrix.container }})
+
     steps:
       - name: Checkout blktests-ci
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -24,15 +39,12 @@ jobs:
       - name: Run in VM
         uses: ./.github/actions/kubevirt-action
         with:
-          container_disk_image: "quay.io/containerdisks/fedora:44"
-          host_devices: "nvme-wdc-zn540"
+          container_disk_image: ${{ matrix.container }}
           run_cmds: |
-            sudo dnf install -y git make python3-configshell python3-kmod \
-                                python3-devel python3-nose2 systemd-units
-
             git clone https://github.com/${{ github.repository }} nvmetcli
+            git config --global --add safe.directory nvmetcli
             cd nvmetcli
-            git checkout ${{ github.sha }}
+            git checkout "${CHECKOUT_SHA}"
 
             sudo modprobe nvmet
             sudo make test
