@@ -1,3 +1,10 @@
+---
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright (c) 2026 SUSE Software Solutions
+#
+# Authors: Daniel Wagner <dwagner@suse.de>
+
 name: Python Sanity
 
 on:
