@@ -19,7 +19,7 @@ all:
 	@echo "  make uninstalldoc  - Uninstall man pages (need sudo)."
 
 test:
-	@nose2 -C --coverage ./nvmet
+	@python3 -m nose2 -C --coverage ./nvmet
 
 doc: ${NAME}
 	${MAKE} -C ${DOCDIR}
