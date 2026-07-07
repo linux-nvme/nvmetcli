@@ -84,7 +84,7 @@ class CFSNode(object):
         if not self.exists:
             try:
                 os.mkdir(self.path)
-            except:
+            except Exception:
                 raise CFSError("Could not create %s in configFS" %
                                self.__class__.__name__)
         self.get_enable()
@@ -110,7 +110,7 @@ class CFSNode(object):
 
         names = [os.path.basename(name).split('_', 1)[1]
                  for name in glob("%s/%s_*" % (self._path, group))
-                     if os.path.isfile(name)]
+                 if os.path.isfile(name)]
 
         if writable is True:
             names = [name for name in names
@@ -203,10 +203,10 @@ class CFSNode(object):
     path = property(_get_path,
                     doc="Get the configFS object path.")
     exists = property(_exists,
-            doc="Is True as long as the underlying configFS object exists. "
-                      + "If the underlying configFS objects gets deleted "
-                      + "either by calling the delete() method, or by any "
-                      + "other means, it will be False.")
+                      doc="Is True as long as the underlying configFS object"
+                      + " exists. If the underlying configFS objects gets"
+                      + " deleted either by calling the delete() method, or by"
+                      + " any other means, it will be False.")
 
     def dump(self):
         d = {}
@@ -261,7 +261,7 @@ class Root(CFSNode):
 
                 try:
                     kmod.Kmod().modprobe(modname)
-                except Exception as e:
+                except Exception:
                     pass
             except ImportError:
                 # Try the binary specified in /proc
@@ -272,7 +272,7 @@ class Root(CFSNode):
                     if modprobe_cmd:
                         subprocess.run(shlex.split(modprobe_cmd) + [modname],
                                        check=False)
-                except Exception as e:
+                except Exception:
                     pass
 
     def _list_subsystems(self):
@@ -291,7 +291,7 @@ class Root(CFSNode):
             yield Port(d, 'lookup')
 
     ports = property(_list_ports,
-                doc="Get the list of Ports.")
+                     doc="Get the list of Ports.")
 
     def _list_hosts(self):
         self._check_self()
@@ -489,7 +489,8 @@ class Subsystem(CFSNode):
                 for name in os.listdir("%s/allowed_hosts/" % self._path)]
 
     allowed_hosts = property(_list_allowed_hosts,
-                             doc="Get the list of Allowed Hosts for the Subsystem.")
+                             doc="Get the list of Allowed Hosts for the "
+                             + "Subsystem.")
 
     def add_allowed_host(self, nqn):
         '''
@@ -658,6 +659,7 @@ class Namespace(CFSNode):
         d['ana_grpid'] = self.grpid
         return d
 
+
 class Passthru(CFSNode):
     '''
     This is an interface to a NVMe passthru in ConfigFS.
@@ -682,7 +684,7 @@ class Passthru(CFSNode):
         return _ids
 
     ids = property(_get_clear_ids,
-                   doc = "Get the passthru namespace clear_ids attribute.")
+                   doc="Get the passthru namespace clear_ids attribute.")
 
     def set_clear_ids(self, clear):
         self._check_self()
@@ -701,7 +703,7 @@ class Passthru(CFSNode):
         return _timeout
 
     admin_timeout = property(_get_admin_timeout,
-                   doc = "Get the passthru admin command timeout.")
+                             doc="Get the passthru admin command timeout.")
 
     def set_admin_timeout(self, timeout):
         self._check_self()
@@ -720,7 +722,7 @@ class Passthru(CFSNode):
         return _timeout
 
     io_timeout = property(_get_io_timeout,
-                   doc = "Get the passthru IO command timeout.")
+                          doc="Get the passthru IO command timeout.")
 
     def set_io_timeout(self, timeout):
         self._check_self()
@@ -750,6 +752,7 @@ class Passthru(CFSNode):
         d['admin_timeout'] = self.admin_timeout
         d['io_timeout'] = self.io_timeout
         return d
+
 
 class Port(CFSNode):
     '''
@@ -946,7 +949,8 @@ class ANAGroup(CFSNode):
         else:
             grpid = int(grpid)
             if grpid < 1 or grpid > self.MAX_GRPID:
-                raise CFSError("GRPID %d must be 1 to %d" % (grpid, self.MAX_GRPID))
+                raise CFSError("GRPID %d must be 1 to %d"
+                               % (grpid, self.MAX_GRPID))
 
         self.attr_groups = ['ana']
         self._port = port
@@ -1030,7 +1034,7 @@ class Host(CFSNode):
             return
 
         try:
-            h = Host(t['nqn'])
+            Host(t['nqn'])
         except CFSError as e:
             err_func("Could not create Host object: %s" % e)
             return
@@ -1044,6 +1048,7 @@ class Host(CFSNode):
 def _test():
     from doctest import testmod
     testmod()
+
 
 if __name__ == "__main__":
     _test()

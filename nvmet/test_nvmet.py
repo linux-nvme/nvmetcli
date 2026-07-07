@@ -115,7 +115,8 @@ class TestNvmet(unittest.TestCase):
         self.assertEqual(len(list(s.namespaces)), 0)
 
     @unittest.skipUnless(test_devices_present(),
-                         "Devices %s not available or suitable" % ','.join(NVMET_TEST_DEVICES))
+                         "Devices %s not available or suitable"
+                         % ','.join(NVMET_TEST_DEVICES))
     def test_namespace_attrs(self):
         root = nvme.Root()
         root.clear_existing()
@@ -157,8 +158,8 @@ class TestNvmet(unittest.TestCase):
         root.clear_existing()
 
         s = nvme.Subsystem(nqn='testnqn', mode='create')
-        n1 = nvme.Namespace(s, mode='create')
-        n2 = nvme.Namespace(s, mode='create')
+        nvme.Namespace(s, mode='create')
+        nvme.Namespace(s, mode='create')
 
         s.delete()
         self.assertEqual(len(list(root.subsystems)), 0)
@@ -203,7 +204,7 @@ class TestNvmet(unittest.TestCase):
         root = nvme.Root()
         root.clear_existing()
 
-        s = nvme.Subsystem(nqn='testnqn', mode='create')
+        nvme.Subsystem(nqn='testnqn', mode='create')
         p = nvme.Port(portid=0, mode='create')
 
         # subsystem doesn't exists, should fail
@@ -372,9 +373,9 @@ class TestNvmet(unittest.TestCase):
         self.assertEqual(len(list(p.referrals)), 0)
 
     def test_allowed_hosts(self):
-        root = nvme.Root()
+        nvme.Root()
 
-        h = nvme.Host(nqn='hostnqn', mode='create')
+        nvme.Host(nqn='hostnqn', mode='create')
 
         s = nvme.Subsystem(nqn='testnqn', mode='create')
 
@@ -405,9 +406,9 @@ class TestNvmet(unittest.TestCase):
         self.assertRaises(nvme.CFSError, nvme.Subsystem,
                           nqn='/', mode='create')
 
-        for l in [ 257, 512, 1024, 2048 ]:
+        for x in [257, 512, 1024, 2048]:
             toolong = ''.join(random.choice(string.ascii_lowercase)
-                              for i in range(l))
+                              for i in range(x))
             self.assertRaises(nvme.CFSError, nvme.Subsystem,
                               nqn=toolong, mode='create')
 
@@ -425,7 +426,7 @@ class TestNvmet(unittest.TestCase):
         root = nvme.Root()
         root.clear_existing()
 
-        h = nvme.Host(nqn='hostnqn', mode='create')
+        nvme.Host(nqn='hostnqn', mode='create')
 
         s = nvme.Subsystem(nqn='testnqn', mode='create')
         s.add_allowed_host(nqn='hostnqn')
@@ -460,7 +461,7 @@ class TestNvmet(unittest.TestCase):
         root.restore_from_file('test.json', True)
 
         # rebuild our view of the world
-        h = nvme.Host(nqn='hostnqn', mode='lookup')
+        nvme.Host(nqn='hostnqn', mode='lookup')
         s = nvme.Subsystem(nqn='testnqn', mode='lookup')
         s2 = nvme.Subsystem(nqn='testnqn2', mode='lookup')
         n = nvme.Namespace(s, nsid=42, mode='lookup')

@@ -97,6 +97,7 @@ class UIRootNode(UINode):
     ui_desc_discovery = {
         'nqn': ('string', 'Discovery NQN'),
     }
+
     def __init__(self, shell):
         UINode.__init__(self, '/', parent=None, cfnode=nvme.Root(),
                         shell=shell)
@@ -188,9 +189,10 @@ class UISubsystemNode(UINode):
         info.append("serial=" + self.cfnode.get_attr("attr", "serial"))
         return (", ".join(info), True)
 
+
 class UIPassthruNode(UINode):
     ui_desc_device = {
-        'path' : ('string', 'Passthru device path')
+        'path': ('string', 'Passthru device path')
     }
 
     def __init__(self, parent):
@@ -207,7 +209,7 @@ class UIPassthruNode(UINode):
             try:
                 self.cfnode.set_enable(1)
                 self.shell.log.info("The passthru has been enabled.")
-            except Exception as e:
+            except Exception:
                 raise configshell.ExecutionError(
                     "The passthru could not be enabled.")
 
@@ -218,7 +220,7 @@ class UIPassthruNode(UINode):
             try:
                 self.cfnode.set_enable(0)
                 self.shell.log.info("The passthru has been disabled.")
-            except Exception as e:
+            except Exception:
                 raise configshell.ExecutionError(
                     "The passthru could not be disabled.")
 
@@ -229,7 +231,7 @@ class UIPassthruNode(UINode):
         '''
         try:
             self.cfnode.set_clear_ids(clear)
-        except Exception as e:
+        except Exception:
             raise configshell.ExecutionError(
                 "Failed to set clear_ids for this passthru target.")
 
@@ -239,7 +241,7 @@ class UIPassthruNode(UINode):
         '''
         try:
             self.cfnode.set_admin_timeout(timeout)
-        except Exception as e:
+        except Exception:
             raise configshell.ExecutionError(
                 "Failed to set the admin passthru command timeout.")
 
@@ -249,7 +251,7 @@ class UIPassthruNode(UINode):
         '''
         try:
             self.cfnode.set_io_timeout(timeout)
-        except Exception as e:
+        except Exception:
             raise configshell.ExecutionError(
                 "Failed to set the IO passthru command timeout.")
 
@@ -264,6 +266,7 @@ class UIPassthruNode(UINode):
             info.append("io_timeout=" + str(self.cfnode.io_timeout))
         info.append("enabled" if self.cfnode.get_enable() else "disabled")
         return (", ".join(info), True)
+
 
 class UINamespacesNode(UINode):
     def __init__(self, parent):
@@ -329,7 +332,7 @@ class UINamespaceNode(UINode):
             try:
                 self.cfnode.set_enable(1)
                 self.shell.log.info("The Namespace has been enabled.")
-            except Exception as e:
+            except Exception:
                 raise configshell.ExecutionError(
                     "The Namespace could not be enabled.")
 
@@ -347,7 +350,7 @@ class UINamespaceNode(UINode):
             try:
                 self.cfnode.set_enable(0)
                 self.shell.log.info("The Namespace has been disabled.")
-            except Exception as e:
+            except Exception:
                 raise configshell.ExecutionError(
                     "The Namespace could not be disabled.")
 
@@ -357,7 +360,7 @@ class UINamespaceNode(UINode):
         '''
         try:
             self.cfnode.set_grpid(grpid)
-        except Exception as e:
+        except Exception:
             raise configshell.ExecutionError(
                 "Failed to set ANA Group ID for this Namespace.")
 
@@ -513,7 +516,7 @@ class UIPortNode(UINode):
         '''
         try:
             inline_data_size = self.cfnode.get_attr("param", "inline_data_size")
-        except Exception as e:
+        except Exception:
             inline_data_size = "n/a"
         if inline_data_size != "n/a":
             info.append("inline_data_size=" + inline_data_size)
@@ -648,7 +651,7 @@ class UIReferralNode(UINode):
             try:
                 self.cfnode.set_enable(1)
                 self.shell.log.info("The Referral has been enabled.")
-            except Exception as e:
+            except Exception:
                 raise configshell.ExecutionError(
                     "The Referral could not be enabled.")
 
@@ -666,7 +669,7 @@ class UIReferralNode(UINode):
             try:
                 self.cfnode.set_enable(0)
                 self.shell.log.info("The Referral has been disabled.")
-            except Exception as e:
+            except Exception:
                 raise configshell.ExecutionError(
                     "The Referral could not be disabled.")
 
@@ -706,7 +709,7 @@ class UIANAGroupsNode(UINode):
 
 class UIANAGroupNode(UINode):
     ui_desc_ana = {
-        'state' : ('string', 'ANA state'),
+        'state': ('string', 'ANA state'),
     }
 
     def __init__(self, parent, cfnode):
@@ -716,6 +719,7 @@ class UIANAGroupNode(UINode):
         info = []
         info.append("state=" + self.cfnode.get_attr("ana", "state"))
         return (", ".join(info), True)
+
 
 class UIHostsNode(UINode):
     def __init__(self, parent):
