@@ -29,11 +29,17 @@ from string import hexdigits
 import uuid
 
 
-def ngiud_set(nguid):
+def nguid_set(nguid):
+    '''
+    Check if the nguid is set.
+    '''
     return any(c in hexdigits and c != '0' for c in nguid)
 
 
 class UINode(configshell.ConfigNode):
+    '''
+    A node in the UI.
+    '''
     def __init__(self, name, parent=None, cfnode=None, shell=None):
         configshell.ConfigNode.__init__(self, name, parent, shell)
         self.cfnode = cfnode
@@ -61,9 +67,15 @@ class UINode(configshell.ConfigNode):
             self.define_config_group_param(group, attr, t, d, writable)
 
     def refresh(self):
+        '''
+        Refreshes and updates the objects tree from the current path.
+        '''
         self._children = set([])
 
     def status(self):
+        '''
+        Displays the current node's status summary.
+        '''
         return "None"
 
     def ui_command_refresh(self):
@@ -94,6 +106,9 @@ class UINode(configshell.ConfigNode):
 
 
 class UIRootNode(UINode):
+    '''
+    The root node of the UI.
+    '''
     ui_desc_discovery = {
         'nqn': ('string', 'Discovery NQN'),
     }
@@ -103,6 +118,9 @@ class UIRootNode(UINode):
                         shell=shell)
 
     def summary(self):
+        '''
+        Returns a summary of the root node.
+        '''
         info = []
         try:
             info.append(f"discovery={self.cfnode.get_attr('discovery', 'nqn')}")
@@ -111,6 +129,9 @@ class UIRootNode(UINode):
         return (", ".join(info), True)
 
     def refresh(self):
+        '''
+        Refreshes and updates the objects tree from the current path.
+        '''
         self._children = set([])
         UISubsystemsNode(self)
         UIPortsNode(self)
@@ -130,10 +151,16 @@ class UIRootNode(UINode):
 
 
 class UISubsystemsNode(UINode):
+    '''
+    A node in the UI representing the subsystems.
+    '''
     def __init__(self, parent):
         UINode.__init__(self, 'subsystems', parent)
 
     def refresh(self):
+        '''
+        Refreshes and updates the objects tree from the current path.
+        '''
         self._children = set([])
         for subsys in self.parent.cfnode.subsystems:
             UISubsystemNode(self, subsys)
@@ -165,6 +192,9 @@ class UISubsystemsNode(UINode):
 
 
 class UISubsystemNode(UINode):
+    '''
+    A node in the UI representing a subsystem.
+    '''
     ui_desc_attr = {
         'allow_any_host': ('string', 'Allow access by any host if set to 1'),
         'serial': ('string', 'Export serial number to hosts'),
@@ -175,6 +205,9 @@ class UISubsystemNode(UINode):
         UINode.__init__(self, cfnode.nqn, parent, cfnode)
 
     def refresh(self):
+        '''
+        Refreshes and updates the objects tree from the current path.
+        '''
         self._children = set([])
         UINamespacesNode(self)
         UIAllowedHostsNode(self)
@@ -182,6 +215,9 @@ class UISubsystemNode(UINode):
             UIPassthruNode(self)
 
     def summary(self):
+        '''
+        Returns a summary of the subsystem.
+        '''
         info = []
         info.append(f"version={self.cfnode.get_attr('attr', 'version')}")
         info.append(f"allow_any="
@@ -191,6 +227,9 @@ class UISubsystemNode(UINode):
 
 
 class UIPassthruNode(UINode):
+    '''
+    A node in the UI representing a passthru.
+    '''
     ui_desc_device = {
         'path': ('string', 'Passthru device path')
     }
@@ -200,9 +239,15 @@ class UIPassthruNode(UINode):
         UINode.__init__(self, 'passthru', parent, passthru)
 
     def refresh(self):
+        '''
+        Refreshes and updates the objects tree from the current path.
+        '''
         self._children = set([])
 
     def ui_command_enable(self):
+        '''
+        Enables the passthru.
+        '''
         if self.cfnode.get_enable():
             self.shell.log.info("The passthru is already enabled.")
         else:
@@ -214,6 +259,9 @@ class UIPassthruNode(UINode):
                     "The passthru could not be enabled.")
 
     def ui_command_disable(self):
+        '''
+        Disables the passthru.
+        '''
         if not self.cfnode.get_enable():
             self.shell.log.info("The passthru is already disabled.")
         else:
@@ -269,10 +317,16 @@ class UIPassthruNode(UINode):
 
 
 class UINamespacesNode(UINode):
+    '''
+    A node in the UI representing the namespaces.
+    '''
     def __init__(self, parent):
         UINode.__init__(self, 'namespaces', parent)
 
     def refresh(self):
+        '''
+        Refreshes and updates the objects tree from the current path.
+        '''
         self._children = set([])
         for ns in self.parent.cfnode.namespaces:
             UINamespaceNode(self, ns)
@@ -304,6 +358,9 @@ class UINamespacesNode(UINode):
 
 
 class UINamespaceNode(UINode):
+    '''
+    A node in the UI representing a namespace.
+    '''
     ui_desc_device = {
         'path': ('string', 'Backing device path.'),
         'nguid': ('string', 'Namspace Global Unique Identifier.'),
@@ -314,6 +371,9 @@ class UINamespaceNode(UINode):
         UINode.__init__(self, str(cfnode.nsid), parent, cfnode)
 
     def status(self):
+        '''
+        Returns the status of the namespace.
+        '''
         if self.cfnode.get_enable():
             return "enabled"
         return "disabled"
@@ -386,10 +446,16 @@ class UINamespaceNode(UINode):
 
 
 class UIAllowedHostsNode(UINode):
+    '''
+    A node in the UI representing the allowed hosts.
+    '''
     def __init__(self, parent):
         UINode.__init__(self, 'allowed_hosts', parent)
 
     def refresh(self):
+        '''
+        Refreshes and updates the objects tree from the current path.
+        '''
         self._children = set([])
         for host in self.parent.cfnode.allowed_hosts:
             UIAllowedHostNode(self, host)
@@ -406,6 +472,9 @@ class UIAllowedHostsNode(UINode):
         UIAllowedHostNode(self, nqn)
 
     def ui_complete_create(self, parameters, text, current_param):
+        '''
+        Completes the create command.
+        '''
         completions = []
         if current_param == 'nqn':
             for host in self.get_node('/hosts').children:
@@ -429,6 +498,9 @@ class UIAllowedHostsNode(UINode):
         self.refresh()
 
     def ui_complete_delete(self, parameters, text, current_param):
+        '''
+        Completes the delete command.
+        '''
         completions = []
         if current_param == 'nqn':
             for nqn in self.parent.cfnode.allowed_hosts:
@@ -441,15 +513,24 @@ class UIAllowedHostsNode(UINode):
 
 
 class UIAllowedHostNode(UINode):
+    '''
+    A node in the UI representing an allowed host.
+    '''
     def __init__(self, parent, nqn):
         UINode.__init__(self, nqn, parent)
 
 
 class UIPortsNode(UINode):
+    '''
+    A node in the UI representing the ports.
+    '''
     def __init__(self, parent):
         UINode.__init__(self, 'ports', parent)
 
     def refresh(self):
+        '''
+        Refreshes and updates the objects tree from the current path.
+        '''
         self._children = set([])
         for port in self.parent.cfnode.ports:
             UIPortNode(self, port)
@@ -480,6 +561,9 @@ class UIPortsNode(UINode):
 
 
 class UIPortNode(UINode):
+    '''
+    A node in the UI representing a port.
+    '''
     ui_desc_addr = {
         'adrfam': ('string', 'Address Family (e.g. ipv4 or fc)'),
         'treq': ('string', 'Transport Security Requirements'),
@@ -504,6 +588,9 @@ class UIPortNode(UINode):
         UIReferralsNode(self)
 
     def summary(self):
+        '''
+        Returns a summary of the port.
+        '''
         info = []
         info.append(f"trtype={self.cfnode.get_attr('addr', 'trtype')}")
         info.append(f"traddr={self.cfnode.get_attr('addr', 'traddr')}")
@@ -511,9 +598,7 @@ class UIPortNode(UINode):
         if trsvcid != "none":
             info.append(f"trsvcid={trsvcid}")
 
-        '''
-        Support older target driver w/o the inline_data_size parameter
-        '''
+        # Support older target driver w/o the inline_data_size parameter
         try:
             inline_data_size = self.cfnode.get_attr("param", "inline_data_size")
         except Exception:
@@ -525,10 +610,16 @@ class UIPortNode(UINode):
 
 
 class UIPortSubsystemsNode(UINode):
+    '''
+    A node in the UI representing the port subsystems.
+    '''
     def __init__(self, parent):
         UINode.__init__(self, 'subsystems', parent)
 
     def refresh(self):
+        '''
+        Refreshes and updates the objects tree from the current path.
+        '''
         self._children = set([])
         for host in self.parent.cfnode.subsystems:
             UIPortSubsystemNode(self, host)
@@ -546,6 +637,9 @@ class UIPortSubsystemsNode(UINode):
         UIPortSubsystemNode(self, nqn)
 
     def ui_complete_create(self, parameters, text, current_param):
+        '''
+        Completes the create command.
+        '''
         completions = []
         if current_param == 'nqn':
             for subsys in self.get_node('/subsystems').children:
@@ -569,6 +663,9 @@ class UIPortSubsystemsNode(UINode):
         self.refresh()
 
     def ui_complete_delete(self, parameters, text, current_param):
+        '''
+        Completes the delete command.
+        '''
         completions = []
         if current_param == 'nqn':
             for nqn in self.parent.cfnode.subsystems:
@@ -581,15 +678,24 @@ class UIPortSubsystemsNode(UINode):
 
 
 class UIPortSubsystemNode(UINode):
+    '''
+    A node in the UI representing a port subsystem.
+    '''
     def __init__(self, parent, nqn):
         UINode.__init__(self, nqn, parent)
 
 
 class UIReferralsNode(UINode):
+    '''
+    A node in the UI representing the referrals.
+    '''
     def __init__(self, parent):
         UINode.__init__(self, 'referrals', parent)
 
     def refresh(self):
+        '''
+        Refreshes and updates the objects tree from the current path.
+        '''
         self._children = set([])
         for r in self.parent.cfnode.referrals:
             UIReferralNode(self, r)
@@ -619,6 +725,9 @@ class UIReferralsNode(UINode):
 
 
 class UIReferralNode(UINode):
+    '''
+    A node in the UI representing a referral.
+    '''
     ui_desc_addr = {
         'adrfam': ('string', 'Address Family (e.g. ipv4 or fc)'),
         'treq': ('string', 'Transport Security Requirements'),
@@ -633,6 +742,9 @@ class UIReferralNode(UINode):
         UINode.__init__(self, cfnode.name, parent, cfnode)
 
     def status(self):
+        '''
+        Returns the status of the referral.
+        '''
         if self.cfnode.get_enable():
             return "enabled"
         return "disabled"
@@ -675,10 +787,16 @@ class UIReferralNode(UINode):
 
 
 class UIANAGroupsNode(UINode):
+    '''
+    A node in the UI representing the ANA groups.
+    '''
     def __init__(self, parent):
         UINode.__init__(self, 'ana_groups', parent)
 
     def refresh(self):
+        '''
+        Refreshes and updates the objects tree from the current path.
+        '''
         self._children = set([])
         for a in self.parent.cfnode.ana_groups:
             UIANAGroupNode(self, a)
@@ -708,6 +826,9 @@ class UIANAGroupsNode(UINode):
 
 
 class UIANAGroupNode(UINode):
+    '''
+    A node in the UI representing an ANA group.
+    '''
     ui_desc_ana = {
         'state': ('string', 'ANA state'),
     }
@@ -716,16 +837,25 @@ class UIANAGroupNode(UINode):
         UINode.__init__(self, str(cfnode.grpid), parent, cfnode)
 
     def summary(self):
+        '''
+        Returns a summary of the ANA group.
+        '''
         info = []
         info.append(f"state={self.cfnode.get_attr('ana', 'state')}")
         return (", ".join(info), True)
 
 
 class UIHostsNode(UINode):
+    '''
+    A node in the UI representing the hosts.
+    '''
     def __init__(self, parent):
         UINode.__init__(self, 'hosts', parent)
 
     def refresh(self):
+        '''
+        Refreshes and updates the objects tree from the current path.
+        '''
         self._children = set([])
         for host in self.parent.cfnode.hosts:
             UIHostNode(self, host)
@@ -756,6 +886,9 @@ class UIHostsNode(UINode):
 
 
 class UIHostNode(UINode):
+    '''
+    A node in the UI representing a host.
+    '''
     def __init__(self, parent, cfnode):
         UINode.__init__(self, cfnode.nqn, parent, cfnode)
 
@@ -773,10 +906,16 @@ def usage():
 
 
 def save(to_file):
+    '''
+    Saves the configuration to a file.
+    '''
     nvme.Root().save_to_file(to_file)
 
 
 def restore(from_file):
+    '''
+    Restores the configuration from a file.
+    '''
     errors = None
 
     try:
@@ -802,10 +941,16 @@ def restore(from_file):
 
 
 def clear(unused):
+    '''
+    Clears the configuration.
+    '''
     nvme.Root().clear_existing()
 
 
 def execute_cmd(cmd):
+    '''
+    Executes a command in the shell.
+    '''
     shell = configshell.ConfigShell('~/.nvmetcli')
     UIRootNode(shell)
     shell.run_cmdline(cmd)
@@ -816,6 +961,9 @@ funcs = dict(save=save, restore=restore, clear=clear)
 
 
 def main():
+    '''
+    The main function.
+    '''
     if os.geteuid() != 0:
         print(f"{sys.argv[0]}: must run as root.", file=sys.stderr)
         sys.exit(-1)
