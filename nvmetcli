@@ -254,9 +254,9 @@ class UIPassthruNode(UINode):
             try:
                 self.cfnode.set_enable(1)
                 self.shell.log.info("The passthru has been enabled.")
-            except Exception:
+            except Exception as exc:
                 raise configshell.ExecutionError(
-                    "The passthru could not be enabled.")
+                    "The passthru could not be enabled.") from exc
 
     def ui_command_disable(self):
         '''
@@ -268,9 +268,9 @@ class UIPassthruNode(UINode):
             try:
                 self.cfnode.set_enable(0)
                 self.shell.log.info("The passthru has been disabled.")
-            except Exception:
+            except Exception as exc:
                 raise configshell.ExecutionError(
-                    "The passthru could not be disabled.")
+                    "The passthru could not be disabled.") from exc
 
     def ui_command_clear_ids(self, clear):
         '''
@@ -279,9 +279,9 @@ class UIPassthruNode(UINode):
         '''
         try:
             self.cfnode.set_clear_ids(clear)
-        except Exception:
+        except Exception as exc:
             raise configshell.ExecutionError(
-                "Failed to set clear_ids for this passthru target.")
+                "Failed to set clear_ids for this passthru target.") from exc
 
     def ui_command_admin_timeout(self, timeout):
         '''
@@ -289,9 +289,9 @@ class UIPassthruNode(UINode):
         '''
         try:
             self.cfnode.set_admin_timeout(timeout)
-        except Exception:
+        except Exception as exc:
             raise configshell.ExecutionError(
-                "Failed to set the admin passthru command timeout.")
+                "Failed to set the admin passthru command timeout.") from exc
 
     def ui_command_io_timeout(self, timeout):
         '''
@@ -299,9 +299,9 @@ class UIPassthruNode(UINode):
         '''
         try:
             self.cfnode.set_io_timeout(timeout)
-        except Exception:
+        except Exception as exc:
             raise configshell.ExecutionError(
-                "Failed to set the IO passthru command timeout.")
+                "Failed to set the IO passthru command timeout.") from exc
 
     def summary(self):
         info = []
@@ -392,9 +392,9 @@ class UINamespaceNode(UINode):
             try:
                 self.cfnode.set_enable(1)
                 self.shell.log.info("The Namespace has been enabled.")
-            except Exception:
+            except Exception as exc:
                 raise configshell.ExecutionError(
-                    "The Namespace could not be enabled.")
+                    "The Namespace could not be enabled.") from exc
 
     def ui_command_disable(self):
         '''
@@ -410,9 +410,9 @@ class UINamespaceNode(UINode):
             try:
                 self.cfnode.set_enable(0)
                 self.shell.log.info("The Namespace has been disabled.")
-            except Exception:
+            except Exception as exc:
                 raise configshell.ExecutionError(
-                    "The Namespace could not be disabled.")
+                    "The Namespace could not be enabled.") from exc
 
     def ui_command_grpid(self, grpid):
         '''
@@ -420,9 +420,9 @@ class UINamespaceNode(UINode):
         '''
         try:
             self.cfnode.set_grpid(grpid)
-        except Exception:
+        except Exception as exc:
             raise configshell.ExecutionError(
-                "Failed to set ANA Group ID for this Namespace.")
+                "Failed to set ANA Group ID for this Namespace.") from exc
 
     def summary(self):
         info = []
@@ -763,9 +763,9 @@ class UIReferralNode(UINode):
             try:
                 self.cfnode.set_enable(1)
                 self.shell.log.info("The Referral has been enabled.")
-            except Exception:
+            except Exception as exc:
                 raise configshell.ExecutionError(
-                    "The Referral could not be enabled.")
+                    "The Referral could not be enabled.") from exc
 
     def ui_command_disable(self):
         '''
@@ -781,9 +781,9 @@ class UIReferralNode(UINode):
             try:
                 self.cfnode.set_enable(0)
                 self.shell.log.info("The Referral has been disabled.")
-            except Exception:
+            except Exception as exc:
                 raise configshell.ExecutionError(
-                    "The Referral could not be disabled.")
+                    "The Referral could not be enabled.") from exc
 
 
 class UIANAGroupsNode(UINode):
