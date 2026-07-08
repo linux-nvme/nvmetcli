@@ -34,8 +34,8 @@ class TestNvmet(unittest.TestCase):
         '''
         root = nvme.Root()
         root.clear_existing()
-        for s in root.subsystems:
-            self.assertTrue(False, 'Found Subsystem after clear')
+        for _ in root.subsystems:
+            self.fail('Found Subsystem after clear')
 
         # create mode
         s1 = nvme.Subsystem(nqn='testnqn1', mode='create')
@@ -83,8 +83,8 @@ class TestNvmet(unittest.TestCase):
         root.clear_existing()
 
         s = nvme.Subsystem(nqn='testnqn', mode='create')
-        for n in s.namespaces:
-            self.assertTrue(False, 'Found Namespace in new Subsystem')
+        for _ in s.namespaces:
+            self.fail('Found Namespace in new Subsystem')
 
         # create mode
         n1 = nvme.Namespace(s, nsid=3, mode='create')
@@ -191,8 +191,8 @@ class TestNvmet(unittest.TestCase):
         '''
         root = nvme.Root()
         root.clear_existing()
-        for p in root.ports:
-            self.assertTrue(False, 'Found Port after clear')
+        for _ in root.ports:
+            self.fail('Found Port after clear')
 
         # create mode
         p1 = nvme.Port(portid=0, mode='create')
@@ -286,8 +286,8 @@ class TestNvmet(unittest.TestCase):
         '''
         root = nvme.Root()
         root.clear_existing()
-        for p in root.hosts:
-            self.assertTrue(False, 'Found Host after clear')
+        for _ in root.hosts:
+            self.fail('Found Host after clear')
 
         # create mode
         h1 = nvme.Host(nqn='foo', mode='create')
