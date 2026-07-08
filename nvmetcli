@@ -143,7 +143,6 @@ class UIRootNode(UINode):
         '''
         errors = self.cfnode.restore_from_file(savefile, clear_existing)
         self.refresh()
-
         if errors:
             raise configshell.ExecutionError(
                 "Configuration restored, {} errors:\n{}".format(
@@ -272,13 +271,13 @@ class UIPassthruNode(UINode):
                 raise configshell.ExecutionError(
                     "The passthru could not be disabled.") from exc
 
-    def ui_command_clear_ids(self, clear):
+    def ui_command_clear_ids(self, clear_id):
         '''
-        If I{clear} is set to non-zero then clears the passthru namespace
+        If I{clear_id} is set to non-zero then clears the passthru namespace
         unique identifiers EUI/GUID/UUID.
         '''
         try:
-            self.cfnode.set_clear_ids(clear)
+            self.cfnode.set_clear_ids(clear_id)
         except Exception as exc:
             raise configshell.ExecutionError(
                 "Failed to set clear_ids for this passthru target.") from exc
@@ -482,8 +481,7 @@ class UIAllowedHostsNode(UINode):
 
         if len(completions) == 1:
             return [f"{completions[0]} "]
-        else:
-            return completions
+        return completions
 
     def ui_command_delete(self, nqn):
         '''
@@ -508,8 +506,7 @@ class UIAllowedHostsNode(UINode):
 
         if len(completions) == 1:
             return [f"{completions[0]} "]
-        else:
-            return completions
+        return completions
 
 
 class UIAllowedHostNode(UINode):
@@ -601,7 +598,7 @@ class UIPortNode(UINode):
         # Support older target driver w/o the inline_data_size parameter
         try:
             inline_data_size = self.cfnode.get_attr("param", "inline_data_size")
-        except Exception:
+        except nvme.CFSError:
             inline_data_size = "n/a"
         if inline_data_size != "n/a":
             info.append(f"inline_data_size={inline_data_size}")
@@ -647,8 +644,7 @@ class UIPortSubsystemsNode(UINode):
 
         if len(completions) == 1:
             return [f"{completions[0]} "]
-        else:
-            return completions
+        return completions
 
     def ui_command_delete(self, nqn):
         '''
@@ -673,8 +669,7 @@ class UIPortSubsystemsNode(UINode):
 
         if len(completions) == 1:
             return [f"{completions[0]} "]
-        else:
-            return completions
+        return completions
 
 
 class UIPortSubsystemNode(UINode):
@@ -957,7 +952,7 @@ def execute_cmd(cmd):
     sys.exit(0)
 
 
-funcs = dict(save=save, restore=restore, clear=clear)
+funcs = {'save': save, 'restore': restore, 'clear': clear}
 
 
 def main():
@@ -972,19 +967,16 @@ def main():
         if sys.argv[1] == "--help":
             usage()
 
-        if sys.argv[1] in funcs.keys():
+        if sys.argv[1] in funcs:
             if len(sys.argv) > 3:
                 usage()
-            if len(sys.argv) == 3:
-                savefile = sys.argv[2]
-            else:
-                savefile = None
+            savefile = sys.argv[2] if len(sys.argv) == 3 else None
 
             funcs[sys.argv[1]](savefile)
             return
-        else:
-            concat_args = ' '.join(sys.argv[1:])
-            execute_cmd(concat_args)
+
+        concat_args = ' '.join(sys.argv[1:])
+        execute_cmd(concat_args)
 
     try:
         shell = configshell.ConfigShell('~/.nvmetcli')

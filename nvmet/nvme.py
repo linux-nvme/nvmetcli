@@ -42,7 +42,6 @@ class CFSError(Exception):
     '''
     Generic slib error.
     '''
-    pass
 
 
 class CFSNotFound(CFSError):
@@ -50,9 +49,9 @@ class CFSNotFound(CFSError):
     The underlying configfs object does not exist. Happens when
     calling methods of an object that is instantiated but have
     been deleted from configfs, or when trying to lookup an
+
     object that does not exist.
     '''
-    pass
 
 
 class CFSNode:
@@ -432,7 +431,7 @@ class Root(CFSNode):
                 err_func(f"'portid' not defined in port {index}")
                 continue
 
-            Port.setup(self, t, err_func)
+            Port.setup(t, err_func)
 
         return errors
 
@@ -945,7 +944,7 @@ class Port(CFSNode):
                           doc="Get the list of ANA Groups for this Port.")
 
     @classmethod
-    def setup(cls, root, n, err_func):
+    def setup(cls, n, err_func):
         '''
         Set up a Port object based upon n dict, from saved config.
         Guard against missing or bad dict items, but keep going.
