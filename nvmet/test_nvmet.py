@@ -115,8 +115,8 @@ class TestNvmet(unittest.TestCase):
         self.assertEqual(len(list(s.namespaces)), 0)
 
     @unittest.skipUnless(test_devices_present(),
-                         "Devices %s not available or suitable"
-                         % ','.join(NVMET_TEST_DEVICES))
+                         f"Devices {','.join(NVMET_TEST_DEVICES)} "
+                         f"not available or suitable")
     def test_namespace_attrs(self):
         root = nvme.Root()
         root.clear_existing()
@@ -420,8 +420,8 @@ class TestNvmet(unittest.TestCase):
                           portid=1 << 17, mode='create')
 
     @unittest.skipUnless(test_devices_present(),
-                         "Devices %s not available or suitable" % ','.join(
-                             NVMET_TEST_DEVICES))
+                         f"Devices {','.join(NVMET_TEST_DEVICES)} not "
+                         f"available or suitable")
     def test_save_restore(self):
         root = nvme.Root()
         root.clear_existing()

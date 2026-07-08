@@ -44,10 +44,10 @@ class UINode(configshell.ConfigNode):
         self.refresh()
 
     def _init_group(self, group):
-        setattr(self.__class__, "ui_getgroup_%s" % group,
+        setattr(self.__class__, f"ui_getgroup_{group}",
                 lambda self, attr:
                     self.cfnode.get_attr(group, attr))
-        setattr(self.__class__, "ui_setgroup_%s" % group,
+        setattr(self.__class__, f"ui_setgroup_{group}",
                 lambda self, attr, value:
                     self.cfnode.set_attr(group, attr, value))
 
@@ -56,7 +56,7 @@ class UINode(configshell.ConfigNode):
         for attr in attrs:
             writable = attr not in attrs_ro
 
-            name = "ui_desc_%s" % group
+            name = f"ui_desc_{group}"
             t, d = getattr(self.__class__, name, {}).get(attr, ('string', ''))
             self.define_config_group_param(group, attr, t, d, writable)
 
@@ -80,7 +80,7 @@ class UINode(configshell.ConfigNode):
         ========
         B{ls}
         '''
-        self.shell.log.info("Status for %s: %s" % (self.path, self.status()))
+        self.shell.log.info(f"Status for {self.path}: {self.status()}")
 
     def ui_command_saveconfig(self, savefile=None):
         '''
@@ -105,7 +105,7 @@ class UIRootNode(UINode):
     def summary(self):
         info = []
         try:
-            info.append("discovery=" + self.cfnode.get_attr("discovery", "nqn"))
+            info.append(f"discovery={self.cfnode.get_attr('discovery', 'nqn')}")
         except nvme.nvme.CFSError:
             pass
         return (", ".join(info), True)
@@ -125,8 +125,8 @@ class UIRootNode(UINode):
 
         if errors:
             raise configshell.ExecutionError(
-                "Configuration restored, %d errors:\n%s" %
-                (len(errors), "\n".join(errors)))
+                "Configuration restored, {} errors:\n{}".format(
+                    len(errors), "\n".join(errors)))
 
 
 class UISubsystemsNode(UINode):
@@ -183,10 +183,10 @@ class UISubsystemNode(UINode):
 
     def summary(self):
         info = []
-        info.append("version=" + self.cfnode.get_attr("attr", "version"))
-        info.append("allow_any=" +
-                    self.cfnode.get_attr("attr", "allow_any_host"))
-        info.append("serial=" + self.cfnode.get_attr("attr", "serial"))
+        info.append(f"version={self.cfnode.get_attr('attr', 'version')}")
+        info.append(f"allow_any="
+                    f"{self.cfnode.get_attr('attr', 'allow_any_host')}")
+        info.append(f"serial={self.cfnode.get_attr('attr', 'serial')}")
         return (", ".join(info), True)
 
 
@@ -371,8 +371,8 @@ class UINamespaceNode(UINode):
         if uuid.UUID(ns_uuid).int != 0:
             info.append("uuid=" + str(ns_uuid))
         ns_nguid = self.cfnode.get_attr("device", "nguid")
-        if ngiud_set(ns_nguid):
-            info.append("nguid=" + ns_nguid)
+        if nguid_set(ns_nguid):
+            info.append(f"nguid={ns_nguid}")
         if self.cfnode.grpid != 0:
             info.append("grpid=" + str(self.cfnode.grpid))
         try:
@@ -412,7 +412,7 @@ class UIAllowedHostsNode(UINode):
                 completions.append(host.cfnode.nqn)
 
         if len(completions) == 1:
-            return [completions[0] + ' ']
+            return [f"{completions[0]} "]
         else:
             return completions
 
@@ -435,7 +435,7 @@ class UIAllowedHostsNode(UINode):
                 completions.append(nqn)
 
         if len(completions) == 1:
-            return [completions[0] + ' ']
+            return [f"{completions[0]} "]
         else:
             return completions
 
@@ -505,11 +505,11 @@ class UIPortNode(UINode):
 
     def summary(self):
         info = []
-        info.append("trtype=" + self.cfnode.get_attr("addr", "trtype"))
-        info.append("traddr=" + self.cfnode.get_attr("addr", "traddr"))
+        info.append(f"trtype={self.cfnode.get_attr('addr', 'trtype')}")
+        info.append(f"traddr={self.cfnode.get_attr('addr', 'traddr')}")
         trsvcid = self.cfnode.get_attr("addr", "trsvcid")
         if trsvcid != "none":
-            info.append("trsvcid=%s" % trsvcid)
+            info.append(f"trsvcid={trsvcid}")
 
         '''
         Support older target driver w/o the inline_data_size parameter
@@ -519,7 +519,7 @@ class UIPortNode(UINode):
         except Exception:
             inline_data_size = "n/a"
         if inline_data_size != "n/a":
-            info.append("inline_data_size=" + inline_data_size)
+            info.append(f"inline_data_size={inline_data_size}")
         enabled = self.cfnode.subsystems or list(self.cfnode.referrals)
         return (", ".join(info), True if enabled else 0)
 
@@ -552,7 +552,7 @@ class UIPortSubsystemsNode(UINode):
                 completions.append(subsys.cfnode.nqn)
 
         if len(completions) == 1:
-            return [completions[0] + ' ']
+            return [f"{completions[0]} "]
         else:
             return completions
 
@@ -575,7 +575,7 @@ class UIPortSubsystemsNode(UINode):
                 completions.append(nqn)
 
         if len(completions) == 1:
-            return [completions[0] + ' ']
+            return [f"{completions[0]} "]
         else:
             return completions
 
@@ -717,7 +717,7 @@ class UIANAGroupNode(UINode):
 
     def summary(self):
         info = []
-        info.append("state=" + self.cfnode.get_attr("ana", "state"))
+        info.append(f"state={self.cfnode.get_attr('ana', 'state')}")
         return (", ".join(info), True)
 
 
@@ -761,11 +761,14 @@ class UIHostNode(UINode):
 
 
 def usage():
-    print("syntax: %s save [file_to_save_to]" % sys.argv[0])
-    print("        %s restore [file_to_restore_from]" % sys.argv[0])
-    print("        %s clear" % sys.argv[0])
-    print("        %s --help  (Print this information)" % sys.argv[0])
-    print("        %s <CMD>   (Run shell command and exit)" % sys.argv[0])
+    '''
+    Prints the usage message.
+    '''
+    print(f"syntax: {sys.argv[0]} save [file_to_save_to]")
+    print(f"        {sys.argv[0]} restore [file_to_restore_from]")
+    print(f"        {sys.argv[0]} clear")
+    print(f"        {sys.argv[0]} --help  (Print this information)")
+    print(f"        {sys.argv[0]} <CMD>   (Run shell command and exit)")
     sys.exit(-1)
 
 
@@ -784,11 +787,11 @@ def restore(from_file):
 
         if e.errno == errno.ENOENT:
             # Not an error if the restore file is not present
-            print("No saved config file at %s, ok, exiting" % from_file)
+            print(f"No saved config file at {from_file}, ok, exiting")
             sys.exit(0)
         else:
-            print("Error processing config file at %s, error %s, exiting" %
-                  (from_file, str(e)))
+            print(f"Error processing config file at {from_file}, error {e}"
+                  f", exiting")
             sys.exit(1)
 
     # These errors are non-fatal
@@ -814,7 +817,7 @@ funcs = dict(save=save, restore=restore, clear=clear)
 
 def main():
     if os.geteuid() != 0:
-        print("%s: must run as root." % sys.argv[0], file=sys.stderr)
+        print(f"{sys.argv[0]}: must run as root.", file=sys.stderr)
         sys.exit(-1)
 
     if len(sys.argv) > 1:

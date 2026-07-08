@@ -73,20 +73,20 @@ class CFSNode(object):
         create -> create the node which must not exist beforehand
         '''
         if mode not in ['any', 'lookup', 'create']:
-            raise CFSError("Invalid mode: %s" % mode)
+            raise CFSError(f"Invalid mode: {mode}")
         if self.exists and mode == 'create':
-            raise CFSError("This %s already exists in configFS" %
-                           self.__class__.__name__)
-        elif not self.exists and mode == 'lookup':
-            raise CFSNotFound("No such %s in configfs: %s" %
-                              (self.__class__.__name__, self.path))
+            raise CFSError(f"This {self.__class__.__name__} already "
+                           f"exists in configFS")
+        if not self.exists and mode == 'lookup':
+            raise CFSNotFound(f"No such {self.__class__.__name__} in "
+                              f"configfs: {self.path}")
 
         if not self.exists:
             try:
                 os.mkdir(self.path)
-            except Exception:
-                raise CFSError("Could not create %s in configFS" %
-                               self.__class__.__name__)
+            except Exception as exc:
+                raise CFSError(f"Could not create {self.__class__.__name__}"
+                               f" in configFS") from exc
         self.get_enable()
 
     def _exists(self):
@@ -94,8 +94,8 @@ class CFSNode(object):
 
     def _check_self(self):
         if not self.exists:
-            raise CFSNotFound("This %s does not exist in configFS" %
-                              self.__class__.__name__)
+            raise CFSNotFound(f"This {self.__class__.__name__} does not "
+                              f"exist in configFS")
 
     def list_attrs(self, group, writable=None):
         '''
@@ -109,7 +109,7 @@ class CFSNode(object):
         self._check_self()
 
         names = [os.path.basename(name).split('_', 1)[1]
-                 for name in glob("%s/%s_*" % (self._path, group))
+                 for name in glob(f"{self._path}/{group}_*")
                  if os.path.isfile(name)]
 
         if writable is True:
@@ -123,7 +123,10 @@ class CFSNode(object):
         return names
 
     def _attr_is_writable(self, group, name):
-        s = os.stat("%s/%s_%s" % (self._path, group, name))
+        '''
+        Returns True if the attribute is writable, False otherwise.
+        '''
+        s = os.stat(f"{self._path}/{group}_{name}")
         return s[stat.ST_MODE] & stat.S_IWUSR
 
     def set_attr(self, group, attribute, value):
@@ -136,20 +139,20 @@ class CFSNode(object):
         @type value: string
         '''
         self._check_self()
-        path = "%s/%s_%s" % (self.path, str(group), str(attribute))
+        path = f"{self.path}/{str(group)}_{str(attribute)}"
 
         if not os.path.isfile(path):
-            raise CFSError("Cannot find attribute: %s" % path)
+            raise CFSError(f"Cannot find attribute: {path}")
 
         if self._enable:
-            raise CFSError("Cannot set attribute while %s is enabled" %
-                           self.__class__.__name__)
+            raise CFSError(f"Cannot set attribute while "
+                           f"{self.__class__.__name__} is enabled")
 
         try:
             with open(path, 'w') as file_fd:
                 file_fd.write(str(value))
         except Exception as e:
-            raise CFSError("Cannot set attribute %s: %s" % (path, e))
+            raise CFSError(f"Cannot set attribute {path}: {e}") from e
 
     def get_attr(self, group, attribute):
         '''
@@ -159,16 +162,16 @@ class CFSNode(object):
         @return: The named attribute's value, as a string.
         '''
         self._check_self()
-        path = "%s/%s_%s" % (self.path, str(group), str(attribute))
+        path = f"{self.path}/{str(group)}_{str(attribute)}"
         if not os.path.isfile(path):
-            raise CFSError("Cannot find attribute: %s" % path)
+            raise CFSError(f"Cannot find attribute: {path}")
 
         with open(path, 'r') as file_fd:
             return file_fd.read().strip()
 
     def get_enable(self):
         self._check_self()
-        path = "%s/enable" % self.path
+        path = f"{self.path}/enable"
         if not os.path.isfile(path):
             return None
 
@@ -178,17 +181,16 @@ class CFSNode(object):
 
     def set_enable(self, value):
         self._check_self()
-        path = "%s/enable" % self.path
+        path = f"{self.path}/enable"
 
         if not os.path.isfile(path) or self._enable is None:
-            raise CFSError("Cannot enable %s" % self.path)
+            raise CFSError(f"Cannot enable {self.path}")
 
         try:
             with open(path, 'w') as file_fd:
                 file_fd.write(str(value))
         except Exception as e:
-            raise CFSError("Cannot enable %s: %s (%s)" %
-                           (self.path, e, value))
+            raise CFSError(f"Cannot enable {self.path}: {e} ({value})") from e
         self._enable = value
 
     def delete(self):
@@ -240,8 +242,7 @@ class Root(CFSNode):
             self._modprobe('nvmet')
 
         if not os.path.isdir(self.configfs_dir):
-            raise CFSError("%s does not exist.  Giving up." %
-                           self.configfs_dir)
+            raise CFSError(f"{self.configfs_dir} does not exist.  Giving up.")
 
         self._path = self.configfs_dir
         self._create_in_cfs('lookup')
@@ -278,7 +279,7 @@ class Root(CFSNode):
     def _list_subsystems(self):
         self._check_self()
 
-        for d in os.listdir("%s/subsystems/" % self._path):
+        for d in os.listdir(f"{self._path}/subsystems/"):
             yield Subsystem(d, 'lookup')
 
     subsystems = property(_list_subsystems,
@@ -287,7 +288,7 @@ class Root(CFSNode):
     def _list_ports(self):
         self._check_self()
 
-        for d in os.listdir("%s/ports/" % self._path):
+        for d in os.listdir(f"{self._path}/ports/"):
             yield Port(d, 'lookup')
 
     ports = property(_list_ports,
@@ -296,7 +297,7 @@ class Root(CFSNode):
     def _list_hosts(self):
         self._check_self()
 
-        for h in os.listdir("%s/hosts/" % self._path):
+        for h in os.listdir(f"{self._path}/hosts/"):
             yield Host(h, 'lookup')
 
     hosts = property(_list_hosts,
@@ -371,21 +372,21 @@ class Root(CFSNode):
         # Create the hosts first because the subsystems reference them
         for index, t in enumerate(config.get('hosts', [])):
             if 'nqn' not in t:
-                err_func("'nqn' not defined in host %d" % index)
+                err_func(f"'nqn' not defined in host {index}")
                 continue
 
             Host.setup(t, err_func)
 
         for index, t in enumerate(config.get('subsystems', [])):
             if 'nqn' not in t:
-                err_func("'nqn' not defined in subsystem %d" % index)
+                err_func(f"'nqn' not defined in subsystem {index}")
                 continue
 
             Subsystem.setup(t, err_func)
 
         for index, t in enumerate(config.get('ports', [])):
             if 'portid' not in t:
-                err_func("'portid' not defined in port %d" % index)
+                err_func(f"'portid' not defined in port {index}")
                 continue
 
             Port.setup(self, t, err_func)
@@ -424,7 +425,7 @@ class Subsystem(CFSNode):
     '''
 
     def __repr__(self):
-        return "<Subsystem %s>" % self.nqn
+        return f"<Subsystem {self.nqn}>"
 
     def __init__(self, nqn=None, mode='any'):
         '''
@@ -448,13 +449,13 @@ class Subsystem(CFSNode):
 
         self.nqn = nqn
         self.attr_groups = ['attr']
-        self._path = "%s/subsystems/%s" % (self.configfs_dir, nqn)
+        self._path = f"{self.configfs_dir}/subsystems/{nqn}"
         self._create_in_cfs(mode)
 
     def _generate_nqn(self):
         prefix = "nqn.2014-08.org.nvmexpress:NVMf:uuid"
         name = str(uuid.uuid4())
-        return "%s:%s" % (prefix, name)
+        return f"{prefix}:{name}"
 
     def delete(self):
         '''
@@ -471,7 +472,7 @@ class Subsystem(CFSNode):
 
     def _list_namespaces(self):
         self._check_self()
-        for d in os.listdir("%s/namespaces/" % self._path):
+        for d in os.listdir(f"{self._path}/namespaces/"):
             yield Namespace(self, int(d), 'lookup')
 
     namespaces = property(_list_namespaces,
@@ -486,7 +487,7 @@ class Subsystem(CFSNode):
 
     def _list_allowed_hosts(self):
         return [os.path.basename(name)
-                for name in os.listdir("%s/allowed_hosts/" % self._path)]
+                for name in os.listdir(f"{self._path}/allowed_hosts/")]
 
     allowed_hosts = property(_list_allowed_hosts,
                              doc="Get the list of Allowed Hosts for the "
@@ -497,19 +498,19 @@ class Subsystem(CFSNode):
         Enable access for the host identified by I{nqn} to the Subsystem
         '''
         try:
-            os.symlink("%s/hosts/%s" % (self.configfs_dir, nqn),
-                       "%s/allowed_hosts/%s" % (self._path, nqn))
+            os.symlink(f"{self.configfs_dir}/hosts/{nqn}",
+                       f"{self._path}/allowed_hosts/{nqn}")
         except Exception as e:
-            raise CFSError("Could not symlink %s in configFS: %s" % (nqn, e))
+            raise CFSError(f"Could not symlink {nqn} in configFS: {e}") from e
 
     def remove_allowed_host(self, nqn):
         '''
         Disable access for the host identified by I{nqn} to the Subsystem
         '''
         try:
-            os.unlink("%s/allowed_hosts/%s" % (self._path, nqn))
+            os.unlink(f"{self._path}/allowed_hosts/{nqn}")
         except Exception as e:
-            raise CFSError("Could not unlink %s in configFS: %s" % (nqn, e))
+            raise CFSError(f"Could not unlink {nqn} in configFS: {e}") from e
 
     def has_passthru(self):
         return os.path.isdir(os.path.join(self.path, "passthru"))
@@ -529,7 +530,7 @@ class Subsystem(CFSNode):
         try:
             s = Subsystem(t['nqn'])
         except CFSError as e:
-            err_func("Could not create Subsystem object: %s" % e)
+            err_func(f"Could not create Subsystem object: {e}")
             return
 
         for ns in t.get('namespaces', []):
@@ -560,7 +561,7 @@ class Namespace(CFSNode):
     MAX_NSID = 8192
 
     def __repr__(self):
-        return "<Namespace %d>" % self.nsid
+        return f"<Namespace {self.nsid}>"
 
     def __init__(self, subsystem, nsid=None, mode='any'):
         '''
@@ -591,16 +592,16 @@ class Namespace(CFSNode):
                     nsid = index
                     break
             if nsid is None:
-                raise CFSError("All NSIDs 1-%d in use" % self.MAX_NSID)
+                raise CFSError(f"All NSIDs 1-{self.MAX_NSID} in use")
         else:
             nsid = int(nsid)
             if nsid < 1 or nsid > self.MAX_NSID:
-                raise CFSError("NSID must be 1 to %d" % self.MAX_NSID)
+                raise CFSError(f"NSID must be 1 to {self.MAX_NSID}")
 
         self.attr_groups = ['device', 'ana', 'resv']
         self._subsystem = subsystem
         self._nsid = nsid
-        self._path = "%s/namespaces/%d" % (self.subsystem.path, self.nsid)
+        self._path = f"{self.subsystem.path}/namespaces/{self.nsid}"
         self._create_in_cfs(mode)
 
     def _get_subsystem(self):
@@ -612,7 +613,7 @@ class Namespace(CFSNode):
     def _get_grpid(self):
         self._check_self()
         _grpid = 0
-        path = "%s/ana_grpid" % self.path
+        path = f"{self.path}/ana_grpid"
         if os.path.isfile(path):
             with open(path, 'r') as file_fd:
                 _grpid = int(file_fd.read().strip())
@@ -620,7 +621,7 @@ class Namespace(CFSNode):
 
     def set_grpid(self, grpid):
         self._check_self()
-        path = "%s/ana_grpid" % self.path
+        path = f"{self.path}/ana_grpid"
         if os.path.isfile(path):
             with open(path, 'w') as file_fd:
                 file_fd.write(str(grpid))
@@ -646,7 +647,7 @@ class Namespace(CFSNode):
         try:
             ns = Namespace(subsys, n['nsid'])
         except CFSError as e:
-            err_func("Could not create Namespace object: %s" % e)
+            err_func(f"Could not create Namespace object: {e}")
             return
 
         ns._setup_attrs(n, err_func)
@@ -671,12 +672,12 @@ class Passthru(CFSNode):
         @return: A Passthru object.
         '''
         super(Passthru, self).__init__()
-        self._path = "%s/passthru" % (subsystem.path)
+        self._path = f"{subsystem.path}/passthru"
         self.attr_groups = ['device']
 
     def _get_clear_ids(self):
         self._check_self()
-        path = "%s/clear_ids" % self.path
+        path = f"{self.path}/clear_ids"
         _ids = 0
         if os.path.isfile(path):
             with open(path, 'r') as file_fd:
@@ -688,14 +689,14 @@ class Passthru(CFSNode):
 
     def set_clear_ids(self, clear):
         self._check_self()
-        path = "%s/clear_ids" % self.path
+        path = f"{self.path}/clear_ids"
         if os.path.isfile(path):
             with open(path, 'w') as file_fd:
                 file_fd.write(str(clear))
 
     def _get_admin_timeout(self):
         self._check_self()
-        path = "%s/admin_timeout" % self.path
+        path = f"{self.path}/admin_timeout"
         _timeout = 0
         if os.path.isfile(path):
             with open(path, 'r') as file_fd:
@@ -707,14 +708,14 @@ class Passthru(CFSNode):
 
     def set_admin_timeout(self, timeout):
         self._check_self()
-        path = "%s/admin_timeout" % self.path
+        path = f"{self.path}/admin_timeout"
         if os.path.isfile(path):
             with open(path, 'w') as file_fd:
                 file_fd.write(str(timeout))
 
     def _get_io_timeout(self):
         self._check_self()
-        path = "%s/io_timeout" % self.path
+        path = f"{self.path}/io_timeout"
         _timeout = 0
         if os.path.isfile(path):
             with open(path, 'r') as file_fd:
@@ -726,7 +727,7 @@ class Passthru(CFSNode):
 
     def set_io_timeout(self, timeout):
         self._check_self()
-        path = "%s/io_timeout" % self.path
+        path = f"{self.path}/io_timeout"
         if os.path.isfile(path):
             with open(path, 'w') as file_fd:
                 file_fd.write(str(timeout))
@@ -736,7 +737,7 @@ class Passthru(CFSNode):
         try:
             pt = Passthru(subsys)
         except CFSError as e:
-            err_func("Could not create Passthru object: %s" % e)
+            err_func(f"Could not create Passthru object: {e}")
             return
         pt._setup_attrs(p, err_func)
         if 'clear_ids' in p:
@@ -762,14 +763,14 @@ class Port(CFSNode):
     MAX_PORTID = 8192
 
     def __repr__(self):
-        return "<Port %d>" % self.portid
+        return f"<Port {self.portid}>"
 
     def __init__(self, portid, mode='any'):
         super(Port, self).__init__()
 
         self.attr_groups = ['addr', 'param']
         self._portid = int(portid)
-        self._path = "%s/ports/%d" % (self.configfs_dir, self._portid)
+        self._path = f"{self.configfs_dir}/ports/{self._portid}"
         self._create_in_cfs(mode)
 
     def _get_portid(self):
@@ -779,7 +780,7 @@ class Port(CFSNode):
 
     def _list_subsystems(self):
         return [os.path.basename(name)
-                for name in os.listdir("%s/subsystems/" % self._path)]
+                for name in os.listdir(f"{self._path}/subsystems/")]
 
     subsystems = property(_list_subsystems,
                           doc="Get the list of Subsystem for this Port.")
@@ -789,19 +790,19 @@ class Port(CFSNode):
         Enable access to the Subsystem identified by I{nqn} through this Port.
         '''
         try:
-            os.symlink("%s/subsystems/%s" % (self.configfs_dir, nqn),
-                       "%s/subsystems/%s" % (self._path, nqn))
+            os.symlink(f"{self.configfs_dir}/subsystems/{nqn}",
+                       f"{self._path}/subsystems/{nqn}")
         except Exception as e:
-            raise CFSError("Could not symlink %s in configFS: %s" % (nqn, e))
+            raise CFSError(f"Could not symlink {nqn} in configFS: {e}") from e
 
     def remove_subsystem(self, nqn):
         '''
         Disable access to the Subsystem identified by I{nqn} through this Port.
         '''
         try:
-            os.unlink("%s/subsystems/%s" % (self._path, nqn))
+            os.unlink(f"{self._path}/subsystems/{nqn}")
         except Exception as e:
-            raise CFSError("Could not unlink %s in configFS: %s" % (nqn, e))
+            raise CFSError(f"Could not unlink {nqn} in configFS: {e}") from e
 
     def delete(self):
         '''
@@ -818,7 +819,7 @@ class Port(CFSNode):
 
     def _list_referrals(self):
         self._check_self()
-        for d in os.listdir("%s/referrals/" % self._path):
+        for d in os.listdir(f"{self._path}/referrals/"):
             yield Referral(self, d, 'lookup')
 
     referrals = property(_list_referrals,
@@ -826,8 +827,8 @@ class Port(CFSNode):
 
     def _list_ana_groups(self):
         self._check_self()
-        if os.path.isdir("%s/ana_groups/" % self._path):
-            for d in os.listdir("%s/ana_groups/" % self._path):
+        if os.path.isdir(f"{self._path}/ana_groups/"):
+            for d in os.listdir(f"{self._path}/ana_groups/"):
                 yield ANAGroup(self, int(d), 'lookup')
 
     ana_groups = property(_list_ana_groups,
@@ -848,7 +849,7 @@ class Port(CFSNode):
         try:
             port = Port(n['portid'])
         except CFSError as e:
-            err_func("Could not create Port object: %s" % e)
+            err_func(f"Could not create Port object: {e}")
             return
 
         port._setup_attrs(n, err_func)
@@ -874,7 +875,7 @@ class Referral(CFSNode):
     '''
 
     def __repr__(self):
-        return "<Referral %d>" % self.name
+        return f"<Referral {self.name}>"
 
     def __init__(self, port, name, mode='any'):
         super(Referral, self).__init__()
@@ -885,7 +886,7 @@ class Referral(CFSNode):
         self.attr_groups = ['addr']
         self.port = port
         self._name = name
-        self._path = "%s/referrals/%s" % (self.port.path, self._name)
+        self._path = f"{self.port.path}/referrals/{self._name}"
         self._create_in_cfs(mode)
 
     def _get_name(self):
@@ -908,7 +909,7 @@ class Referral(CFSNode):
         try:
             r = Referral(port, n['name'])
         except CFSError as e:
-            err_func("Could not create Referral object: %s" % e)
+            err_func(f"Could not create Referral object: {e}")
             return
 
         r._setup_attrs(n, err_func)
@@ -927,12 +928,12 @@ class ANAGroup(CFSNode):
     MAX_GRPID = 1024
 
     def __repr__(self):
-        return "<ANA Group %d>" % self.grpid
+        return f"<ANA Group {self.grpid}>"
 
     def __init__(self, port, grpid, mode='any'):
         super(ANAGroup, self).__init__()
 
-        if not os.path.isdir("%s/ana_groups" % port.path):
+        if not os.path.isdir(f"{port.path}/ana_groups"):
             raise CFSError("ANA not supported")
 
         if grpid is None:
@@ -945,17 +946,16 @@ class ANAGroup(CFSNode):
                     grpid = index
                     break
             if grpid is None:
-                raise CFSError("All ANA Group IDs 1-%d in use" % self.MAX_GRPID)
+                raise CFSError(f"All ANA Group IDs 1-{self.MAX_GRPID} in use")
         else:
             grpid = int(grpid)
             if grpid < 1 or grpid > self.MAX_GRPID:
-                raise CFSError("GRPID %d must be 1 to %d"
-                               % (grpid, self.MAX_GRPID))
+                raise CFSError(f"GRPID {grpid} must be 1 to {self.MAX_GRPID}")
 
         self.attr_groups = ['ana']
         self._port = port
         self._grpid = grpid
-        self._path = "%s/ana_groups/%d" % (self._port.path, self.grpid)
+        self._path = f"{self._port.path}/ana_groups/{self.grpid}"
         self._create_in_cfs(mode)
 
     def _get_grpid(self):
@@ -978,7 +978,7 @@ class ANAGroup(CFSNode):
         try:
             a = ANAGroup(port, n['grpid'])
         except CFSError as e:
-            err_func("Could not create ANA Group object: %s" % e)
+            err_func(f"Could not create ANA Group object: {e}")
             return
 
         a._setup_attrs(n, err_func)
@@ -1001,7 +1001,7 @@ class Host(CFSNode):
     '''
 
     def __repr__(self):
-        return "<Host %s>" % self.nqn
+        return f"<Host {self.nqn}>"
 
     def __init__(self, nqn, mode='any'):
         '''
@@ -1018,7 +1018,7 @@ class Host(CFSNode):
         super(Host, self).__init__()
 
         self.nqn = nqn
-        self._path = "%s/hosts/%s" % (self.configfs_dir, nqn)
+        self._path = f"{self.configfs_dir}/hosts/{nqn}"
         self._create_in_cfs(mode)
 
     @classmethod
@@ -1036,7 +1036,7 @@ class Host(CFSNode):
         try:
             Host(t['nqn'])
         except CFSError as e:
-            err_func("Could not create Host object: %s" % e)
+            err_func(f"Could not create Host object: {e}")
             return
 
     def dump(self):
