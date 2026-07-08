@@ -269,7 +269,7 @@ class Root(CFSNode):
     The root of the NVMe target configfs hierarchy.
     '''
     def __init__(self):
-        super(Root, self).__init__()
+        super().__init__()
 
         self.attr_groups = ['discovery']
         if not os.path.isdir(self.configfs_dir):
@@ -445,7 +445,7 @@ class Root(CFSNode):
                                 abort_on_error=abort_on_error)
 
     def dump(self):
-        d = super(Root, self).dump()
+        d = super().dump()
         d['subsystems'] = [s.dump() for s in self.subsystems]
         d['ports'] = [p.dump() for p in self.ports]
         d['hosts'] = [h.dump() for h in self.hosts]
@@ -474,7 +474,7 @@ class Subsystem(CFSNode):
         @type mode:string
         @return: A Subsystem object.
         '''
-        super(Subsystem, self).__init__()
+        super().__init__()
 
         if nqn is None:
             if mode == 'lookup':
@@ -505,7 +505,7 @@ class Subsystem(CFSNode):
             ns.delete()
         for h in self.allowed_hosts:
             self.remove_allowed_host(h)
-        super(Subsystem, self).delete()
+        super().delete()
 
     def _list_namespaces(self):
         '''
@@ -592,7 +592,7 @@ class Subsystem(CFSNode):
         s._setup_attrs(t, err_func)
 
     def dump(self):
-        d = super(Subsystem, self).dump()
+        d = super().dump()
         d['nqn'] = self.nqn
         d['namespaces'] = [ns.dump() for ns in self.namespaces]
         d['allowed_hosts'] = self.allowed_hosts
@@ -626,7 +626,7 @@ class Namespace(CFSNode):
         @type mode:string
         @return: A Namespace object.
         '''
-        super(Namespace, self).__init__()
+        super().__init__()
 
         if not isinstance(subsystem, Subsystem):
             raise CFSError("Invalid parent class")
@@ -719,7 +719,7 @@ class Namespace(CFSNode):
         '''
         Returns a dict with the config of the object.
         '''
-        d = super(Namespace, self).dump()
+        d = super().dump()
         d['nsid'] = self.nsid
         d['ana_grpid'] = self.grpid
         return d
@@ -736,7 +736,7 @@ class Passthru(CFSNode):
         @param subsystem: The parent Subsystem object.
         @return: A Passthru object.
         '''
-        super(Passthru, self).__init__()
+        super().__init__()
         self._path = f"{subsystem.path}/passthru"
         self.attr_groups = ['device']
 
@@ -837,7 +837,7 @@ class Passthru(CFSNode):
         '''
         Returns a dict with the config of the object.
         '''
-        d = super(Passthru, self).dump()
+        d = super().dump()
         d['clear_ids'] = self.ids
         d['admin_timeout'] = self.admin_timeout
         d['io_timeout'] = self.io_timeout
@@ -855,7 +855,7 @@ class Port(CFSNode):
         return f"<Port {self.portid}>"
 
     def __init__(self, portid, mode='any'):
-        super(Port, self).__init__()
+        super().__init__()
 
         self.attr_groups = ['addr', 'param']
         self._portid = int(portid)
@@ -910,7 +910,7 @@ class Port(CFSNode):
             a.delete()
         for r in self.referrals:
             r.delete()
-        super(Port, self).delete()
+        super().delete()
 
     def _list_referrals(self):
         '''
@@ -965,7 +965,7 @@ class Port(CFSNode):
         '''
         Returns a dict with the config of the object.
         '''
-        d = super(Port, self).dump()
+        d = super().dump()
         d['portid'] = self.portid
         d['subsystems'] = self.subsystems
         d['ana_groups'] = [a.dump() for a in self.ana_groups]
@@ -982,7 +982,7 @@ class Referral(CFSNode):
         return f"<Referral {self.name}>"
 
     def __init__(self, port, name, mode='any'):
-        super(Referral, self).__init__()
+        super().__init__()
 
         if not isinstance(port, Port):
             raise CFSError("Invalid parent class")
@@ -1025,7 +1025,7 @@ class Referral(CFSNode):
         '''
         Returns a dict with the config of the object.
         '''
-        d = super(Referral, self).dump()
+        d = super().dump()
         d['name'] = self.name
         return d
 
@@ -1041,7 +1041,7 @@ class ANAGroup(CFSNode):
         return f"<ANA Group {self.grpid}>"
 
     def __init__(self, port, grpid, mode='any'):
-        super(ANAGroup, self).__init__()
+        super().__init__()
 
         if not os.path.isdir(f"{port.path}/ana_groups"):
             raise CFSError("ANA not supported")
@@ -1102,13 +1102,13 @@ class ANAGroup(CFSNode):
         '''
         # ANA Group 1 is automatically created/deleted
         if self.grpid != 1:
-            super(ANAGroup, self).delete()
+            super().delete()
 
     def dump(self):
         '''
         Returns a dict with the config of the object.
         '''
-        d = super(ANAGroup, self).dump()
+        d = super().dump()
         d['grpid'] = self.grpid
         return d
 
@@ -1134,7 +1134,7 @@ class Host(CFSNode):
         @type mode:string
         @return: A Host object.
         '''
-        super(Host, self).__init__()
+        super().__init__()
 
         self.nqn = nqn
         self._path = f"{self.configfs_dir}/hosts/{nqn}"
@@ -1162,7 +1162,7 @@ class Host(CFSNode):
         '''
         Returns a dict with the config of the object.
         '''
-        d = super(Host, self).dump()
+        d = super().dump()
         d['nqn'] = self.nqn
         return d
 
