@@ -26,6 +26,14 @@ import subprocess
 import shlex
 from doctest import testmod
 from glob import iglob as glob
+try:
+    from kmodpy import kmod
+except ImportError:
+    kmod = None
+try:
+    import kmod as kmod_ctypes
+except ImportError:
+    kmod_ctypes = None
 
 DEFAULT_SAVE_FILE = '/etc/nvmet/config.json'
 
@@ -283,33 +291,33 @@ class Root(CFSNode):
         self._create_in_cfs('lookup')
 
     def _modprobe(self, modname):
-        try:
-            from kmodpy import kmod
-
+        '''
+        Load a kernel module.
+        '''
+        if kmod:
             try:
                 kmod.Kmod().modprobe(modname, quiet=True)
+                return
             except kmod.KmodError:
                 pass
-        except ImportError:
-            # Try the ctypes library included with the libkmod itself.
-            try:
-                import kmod
 
-                try:
-                    kmod.Kmod().modprobe(modname)
-                except Exception:
-                    pass
-            except ImportError:
-                # Try the binary specified in /proc
-                try:
-                    modprobe_cmd = None
-                    with open('/proc/sys/kernel/modprobe', 'r') as f:
-                        modprobe_cmd = f.read()
-                    if modprobe_cmd:
-                        subprocess.run(shlex.split(modprobe_cmd) + [modname],
-                                       check=False)
-                except Exception:
-                    pass
+        if kmod_ctypes:
+            try:
+                kmod_ctypes.Kmod().modprobe(modname)
+                return
+            except Exception:
+                pass
+
+        # Try the binary specified in /proc
+        try:
+            modprobe_cmd = None
+            with open('/proc/sys/kernel/modprobe', 'r', encoding="utf-8") as f:
+                modprobe_cmd = f.read()
+            if modprobe_cmd:
+                subprocess.run(shlex.split(modprobe_cmd) + [modname],
+                               check=False)
+        except Exception:
+            pass
 
     def _list_subsystems(self):
         self._check_self()
