@@ -1,3 +1,6 @@
+"""
+Tests for the nvmet API.
+"""
 
 import os
 import random
@@ -13,13 +16,22 @@ NVMET_TEST_DEVICES = os.getenv("NVMET_TEST_DEVICES",
 
 
 def test_devices_present():
+    '''
+    Check if the test devices are present.
+    '''
     return len([x for x in NVMET_TEST_DEVICES
                 if os.path.exists(x) and
                 (stat.S_ISBLK(os.stat(x).st_mode) or os.path.isfile(x))]) >= 2
 
 
 class TestNvmet(unittest.TestCase):
+    '''
+    Tests for the nvmet API.
+    '''
     def test_subsystem(self):
+        '''
+        Test Subsystem creation and deletion.
+        '''
         root = nvme.Root()
         root.clear_existing()
         for s in root.subsystems:
@@ -64,6 +76,9 @@ class TestNvmet(unittest.TestCase):
         self.assertEqual(len(list(root.subsystems)), 0)
 
     def test_namespace(self):
+        '''
+        Test Namespace creation and deletion.
+        '''
         root = nvme.Root()
         root.clear_existing()
 
@@ -118,6 +133,9 @@ class TestNvmet(unittest.TestCase):
                          f"Devices {','.join(NVMET_TEST_DEVICES)} "
                          f"not available or suitable")
     def test_namespace_attrs(self):
+        '''
+        Test Namespace attributes.
+        '''
         root = nvme.Root()
         root.clear_existing()
 
@@ -154,6 +172,9 @@ class TestNvmet(unittest.TestCase):
         n.delete()
 
     def test_recursive_delete(self):
+        '''
+        Test recursive deletion of a Subsystem.
+        '''
         root = nvme.Root()
         root.clear_existing()
 
@@ -165,6 +186,9 @@ class TestNvmet(unittest.TestCase):
         self.assertEqual(len(list(root.subsystems)), 0)
 
     def test_port(self):
+        '''
+        Test Port creation and deletion.
+        '''
         root = nvme.Root()
         root.clear_existing()
         for p in root.ports:
@@ -201,6 +225,9 @@ class TestNvmet(unittest.TestCase):
         self.assertEqual(len(list(root.ports)), 0)
 
     def test_loop_port(self):
+        '''
+        Test loop port functionality.
+        '''
         root = nvme.Root()
         root.clear_existing()
 
@@ -254,6 +281,9 @@ class TestNvmet(unittest.TestCase):
         p.delete()
 
     def test_host(self):
+        '''
+        Test Host creation and deletion.
+        '''
         root = nvme.Root()
         root.clear_existing()
         for p in root.hosts:
@@ -290,6 +320,9 @@ class TestNvmet(unittest.TestCase):
         self.assertEqual(len(list(root.hosts)), 0)
 
     def test_referral(self):
+        '''
+        Test Referral creation and deletion.
+        '''
         root = nvme.Root()
         root.clear_existing()
 
@@ -373,6 +406,9 @@ class TestNvmet(unittest.TestCase):
         self.assertEqual(len(list(p.referrals)), 0)
 
     def test_allowed_hosts(self):
+        '''
+        Test allowed hosts functionality.
+        '''
         nvme.Root()
 
         nvme.Host(nqn='hostnqn', mode='create')
@@ -398,6 +434,9 @@ class TestNvmet(unittest.TestCase):
         self.assertRaises(nvme.CFSError, s.remove_allowed_host, 'foobar')
 
     def test_invalid_input(self):
+        '''
+        Test invalid input to the API.
+        '''
         root = nvme.Root()
         root.clear_existing()
 
@@ -423,6 +462,9 @@ class TestNvmet(unittest.TestCase):
                          f"Devices {','.join(NVMET_TEST_DEVICES)} not "
                          f"available or suitable")
     def test_save_restore(self):
+        '''
+        Test save and restore functionality.
+        '''
         root = nvme.Root()
         root.clear_existing()
 
