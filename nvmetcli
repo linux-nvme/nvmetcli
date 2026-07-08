@@ -471,7 +471,7 @@ class UIAllowedHostsNode(UINode):
         self.parent.cfnode.add_allowed_host(nqn)
         UIAllowedHostNode(self, nqn)
 
-    def ui_complete_create(self, parameters, text, current_param):
+    def ui_complete_create(self, _parameters, _text, current_param):
         '''
         Completes the create command.
         '''
@@ -497,7 +497,7 @@ class UIAllowedHostsNode(UINode):
         self.parent.cfnode.remove_allowed_host(nqn)
         self.refresh()
 
-    def ui_complete_delete(self, parameters, text, current_param):
+    def ui_complete_delete(self, _parameters, _text, current_param):
         '''
         Completes the delete command.
         '''
@@ -636,7 +636,7 @@ class UIPortSubsystemsNode(UINode):
         self.parent.cfnode.add_subsystem(nqn)
         UIPortSubsystemNode(self, nqn)
 
-    def ui_complete_create(self, parameters, text, current_param):
+    def ui_complete_create(self, _parameters, _text, current_param):
         '''
         Completes the create command.
         '''
@@ -662,7 +662,7 @@ class UIPortSubsystemsNode(UINode):
         self.parent.cfnode.remove_subsystem(nqn)
         self.refresh()
 
-    def ui_complete_delete(self, parameters, text, current_param):
+    def ui_complete_delete(self, _parameters, _text, current_param):
         '''
         Completes the delete command.
         '''
@@ -940,7 +940,7 @@ def restore(from_file):
     sys.exit(0)
 
 
-def clear(unused):
+def clear(_unused):
     '''
     Clears the configuration.
     '''
