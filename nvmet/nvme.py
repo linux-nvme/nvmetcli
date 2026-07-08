@@ -24,6 +24,7 @@ import uuid
 import json
 import subprocess
 import shlex
+from doctest import testmod
 from glob import iglob as glob
 
 DEFAULT_SAVE_FILE = '/etc/nvmet/config.json'
@@ -1168,7 +1169,6 @@ class Host(CFSNode):
 
 
 def _test():
-    from doctest import testmod
     testmod()
 
 

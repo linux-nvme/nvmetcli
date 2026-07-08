@@ -1,2 +1,5 @@
-from .nvme import Root, Subsystem, Namespace, Port, Host, Referral, ANAGroup, \
-    Passthru, DEFAULT_SAVE_FILE   # noqa: F401
+"""
+NVMe-oF Target configfs-based kernel driver API
+"""
+from .nvme import (ANAGroup, DEFAULT_SAVE_FILE, Host, Namespace,  # noqa: F401
+                   Passthru, Port, Referral, Root, Subsystem, CFSError)
