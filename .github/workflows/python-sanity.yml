@@ -36,4 +36,4 @@ jobs:
         run: python3 -m flake8 nvmet/ nvmetcli
 
       - name: pylint
-        run: python3 -m pylint --disable=all --enable=E nvmet/ nvmetcli
+        run: python3 -m pylint --enable=E nvmet/ nvmetcli
