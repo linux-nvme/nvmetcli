@@ -7,7 +7,7 @@ Standards-Version: 3.9.4
 
 Package: nvmetcli
 Architecture: all
-Depends: ${misc:Depends}, ${python:Depends}, python-configshell-fb, python-kmodpy
+Depends: ${misc:Depends}, ${python:Depends}, python-configshell-fb
 Description: Command line interface for the kernel NVMe target
  This package contains the command line interface to the NVMe over Fabrics
  target in the Linux kernel.  It allows configuring the target interactively
