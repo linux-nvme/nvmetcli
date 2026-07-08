@@ -168,7 +168,7 @@ class CFSNode:
                            f"{self.__class__.__name__} is enabled")
 
         try:
-            with open(path, 'w') as file_fd:
+            with open(path, 'w', encoding="utf-8") as file_fd:
                 file_fd.write(str(value))
         except Exception as e:
             raise CFSError(f"Cannot set attribute {path}: {e}") from e
@@ -185,7 +185,7 @@ class CFSNode:
         if not os.path.isfile(path):
             raise CFSError(f"Cannot find attribute: {path}")
 
-        with open(path, 'r') as file_fd:
+        with open(path, 'r', encoding="utf-8") as file_fd:
             return file_fd.read().strip()
 
     def get_enable(self):
@@ -197,7 +197,7 @@ class CFSNode:
         if not os.path.isfile(path):
             return None
 
-        with open(path, 'r') as file_fd:
+        with open(path, 'r', encoding="utf-8") as file_fd:
             self._enable = int(file_fd.read().strip())
         return self._enable
 
@@ -212,7 +212,7 @@ class CFSNode:
             raise CFSError(f"Cannot enable {self.path}")
 
         try:
-            with open(path, 'w') as file_fd:
+            with open(path, 'w', encoding="utf-8") as file_fd:
                 file_fd.write(str(value))
         except Exception as e:
             raise CFSError(f"Cannot enable {self.path}: {e} ({value})") from e
@@ -351,7 +351,7 @@ class Root(CFSNode):
         if not os.path.exists(savefile_dir):
             os.makedirs(savefile_dir)
 
-        with open(savefile + ".temp", "w+") as f:
+        with open(savefile + ".temp", "w+", encoding="utf-8") as f:
             os.fchmod(f.fileno(), stat.S_IRUSR | stat.S_IWUSR)
             f.write(json.dumps(self.dump(), sort_keys=True, indent=2))
             f.write("\n")
@@ -439,7 +439,7 @@ class Root(CFSNode):
         else:
             savefile = DEFAULT_SAVE_FILE
 
-        with open(savefile, "r") as f:
+        with open(savefile, "r", encoding="utf-8") as f:
             config = json.loads(f.read())
             return self.restore(config, clear_existing=clear_existing,
                                 abort_on_error=abort_on_error)
@@ -673,7 +673,7 @@ class Namespace(CFSNode):
         _grpid = 0
         path = f"{self.path}/ana_grpid"
         if os.path.isfile(path):
-            with open(path, 'r') as file_fd:
+            with open(path, 'r', encoding="utf-8") as file_fd:
                 _grpid = int(file_fd.read().strip())
         return _grpid
 
@@ -684,7 +684,7 @@ class Namespace(CFSNode):
         self._check_self()
         path = f"{self.path}/ana_grpid"
         if os.path.isfile(path):
-            with open(path, 'w') as file_fd:
+            with open(path, 'w', encoding="utf-8") as file_fd:
                 file_fd.write(str(grpid))
 
     grpid = property(_get_grpid, doc="Get the ANA Group ID.")
@@ -748,7 +748,7 @@ class Passthru(CFSNode):
         path = f"{self.path}/clear_ids"
         _ids = 0
         if os.path.isfile(path):
-            with open(path, 'r') as file_fd:
+            with open(path, 'r', encoding="utf-8") as file_fd:
                 _ids = int(file_fd.read().strip())
         return _ids
 
@@ -762,7 +762,7 @@ class Passthru(CFSNode):
         self._check_self()
         path = f"{self.path}/clear_ids"
         if os.path.isfile(path):
-            with open(path, 'w') as file_fd:
+            with open(path, 'w', encoding="utf-8") as file_fd:
                 file_fd.write(str(clear))
 
     def _get_admin_timeout(self):
@@ -773,7 +773,7 @@ class Passthru(CFSNode):
         path = f"{self.path}/admin_timeout"
         _timeout = 0
         if os.path.isfile(path):
-            with open(path, 'r') as file_fd:
+            with open(path, 'r', encoding="utf-8") as file_fd:
                 _timeout = int(file_fd.read().strip())
         return _timeout
 
@@ -787,7 +787,7 @@ class Passthru(CFSNode):
         self._check_self()
         path = f"{self.path}/admin_timeout"
         if os.path.isfile(path):
-            with open(path, 'w') as file_fd:
+            with open(path, 'w', encoding="utf-8") as file_fd:
                 file_fd.write(str(timeout))
 
     def _get_io_timeout(self):
@@ -798,7 +798,7 @@ class Passthru(CFSNode):
         path = f"{self.path}/io_timeout"
         _timeout = 0
         if os.path.isfile(path):
-            with open(path, 'r') as file_fd:
+            with open(path, 'r', encoding="utf-8") as file_fd:
                 _timeout = int(file_fd.read().strip())
         return _timeout
 
@@ -812,7 +812,7 @@ class Passthru(CFSNode):
         self._check_self()
         path = f"{self.path}/io_timeout"
         if os.path.isfile(path):
-            with open(path, 'w') as file_fd:
+            with open(path, 'w', encoding="utf-8") as file_fd:
                 file_fd.write(str(timeout))
 
     @classmethod
