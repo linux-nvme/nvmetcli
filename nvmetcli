@@ -985,7 +985,7 @@ def main():
         shell.log.error(str(msg))
         return
 
-    while not shell._exit:
+    while not shell._exit:  # pylint: disable=protected-access
         try:
             shell.run_interactive()
         except (nvme.CFSError, configshell.ExecutionError) as msg:
