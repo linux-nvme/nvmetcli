@@ -981,14 +981,14 @@ def main():
     try:
         shell = configshell.ConfigShell('~/.nvmetcli')
         UIRootNode(shell)
-    except Exception as msg:
+    except (nvme.CFSError, configshell.ExecutionError) as msg:
         shell.log.error(str(msg))
         return
 
     while not shell._exit:
         try:
             shell.run_interactive()
-        except Exception as msg:
+        except (nvme.CFSError, configshell.ExecutionError) as msg:
             shell.log.error(str(msg))
 
 
