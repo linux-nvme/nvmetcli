@@ -178,7 +178,7 @@ class CFSNode:
         try:
             with open(path, 'w', encoding="utf-8") as file_fd:
                 file_fd.write(str(value))
-        except Exception as e:
+        except OSError as e:
             raise CFSError(f"Cannot set attribute {path}: {e}") from e
 
     def get_attr(self, group, attribute):
@@ -222,7 +222,7 @@ class CFSNode:
         try:
             with open(path, 'w', encoding="utf-8") as file_fd:
                 file_fd.write(str(value))
-        except Exception as e:
+        except OSError as e:
             raise CFSError(f"Cannot enable {self.path}: {e} ({value})") from e
         self._enable = value
 
@@ -304,7 +304,7 @@ class Root(CFSNode):
             try:
                 kmod_ctypes.Kmod().modprobe(modname)
                 return
-            except Exception:
+            except OSError:
                 pass
 
         # Try the binary specified in /proc
@@ -315,7 +315,7 @@ class Root(CFSNode):
             if modprobe_cmd:
                 subprocess.run(shlex.split(modprobe_cmd) + [modname],
                                check=False)
-        except Exception:
+        except OSError:
             pass
 
     def _list_subsystems(self):
@@ -554,7 +554,7 @@ class Subsystem(CFSNode):
         try:
             os.symlink(f"{self.configfs_dir}/hosts/{nqn}",
                        f"{self._path}/allowed_hosts/{nqn}")
-        except Exception as e:
+        except OSError as e:
             raise CFSError(f"Could not symlink {nqn} in configFS: {e}") from e
 
     def remove_allowed_host(self, nqn):
@@ -563,7 +563,7 @@ class Subsystem(CFSNode):
         '''
         try:
             os.unlink(f"{self._path}/allowed_hosts/{nqn}")
-        except Exception as e:
+        except OSError as e:
             raise CFSError(f"Could not unlink {nqn} in configFS: {e}") from e
 
     def has_passthru(self):
@@ -895,7 +895,7 @@ class Port(CFSNode):
         try:
             os.symlink(f"{self.configfs_dir}/subsystems/{nqn}",
                        f"{self._path}/subsystems/{nqn}")
-        except Exception as e:
+        except OSError as e:
             raise CFSError(f"Could not symlink {nqn} in configFS: {e}") from e
 
     def remove_subsystem(self, nqn):
@@ -904,7 +904,7 @@ class Port(CFSNode):
         '''
         try:
             os.unlink(f"{self._path}/subsystems/{nqn}")
-        except Exception as e:
+        except OSError as e:
             raise CFSError(f"Could not unlink {nqn} in configFS: {e}") from e
 
     def delete(self):
