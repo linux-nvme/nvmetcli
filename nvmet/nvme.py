@@ -1144,6 +1144,7 @@ class Host(CFSNode):
         '''
         super().__init__()
 
+        self.attr_groups = ['dhchap']
         self.nqn = nqn
         self._path = f"{self.configfs_dir}/hosts/{nqn}"
         self._create_in_cfs(mode)
@@ -1161,10 +1162,12 @@ class Host(CFSNode):
             return
 
         try:
-            Host(t['nqn'])
+            h = Host(t['nqn'])
         except CFSError as e:
             err_func(f"Could not create Host object: {e}")
             return
+
+        h._setup_attrs(t, err_func)
 
     def dump(self):
         '''

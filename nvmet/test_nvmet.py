@@ -468,7 +468,8 @@ class TestNvmet(unittest.TestCase):
         root = nvme.Root()
         root.clear_existing()
 
-        nvme.Host(nqn='hostnqn', mode='create')
+        h = nvme.Host(nqn='hostnqn', mode='create')
+        h.set_attr('dhchap', 'dhgroup', 'ffdhe2048')
 
         s = nvme.Subsystem(nqn='testnqn', mode='create')
         s.add_allowed_host(nqn='hostnqn')
@@ -503,7 +504,7 @@ class TestNvmet(unittest.TestCase):
         root.restore_from_file('test.json', True)
 
         # rebuild our view of the world
-        nvme.Host(nqn='hostnqn', mode='lookup')
+        h = nvme.Host(nqn='hostnqn', mode='lookup')
         s = nvme.Subsystem(nqn='testnqn', mode='lookup')
         s2 = nvme.Subsystem(nqn='testnqn2', mode='lookup')
         n = nvme.Namespace(s, nsid=42, mode='lookup')
@@ -518,6 +519,7 @@ class TestNvmet(unittest.TestCase):
         self.assertEqual(n.get_attr('device', 'path'), NVMET_TEST_DEVICES[0])
         self.assertEqual(n.get_attr('device', 'nguid'), nguid)
 
+        self.assertEqual(h.get_attr('dhchap', 'dhgroup'), 'ffdhe2048')
         self.assertEqual(p.get_attr('addr', 'trtype'), 'loop')
         self.assertEqual(p.get_attr('addr', 'adrfam'), 'ipv4')
         self.assertEqual(p.get_attr('addr', 'traddr'), '192.168.0.1')
