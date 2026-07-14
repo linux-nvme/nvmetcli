@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nvmetcli"
+version = "0.8"
+description = "NVMe target configuration tool"
+dependencies = ["configshell-fb>=2.0"]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+maintainers = [
+    { name = "Christoph Hellwig", email = "hch@lst.de" },
+    { name = "Daniel Wagner", email = "wagi@monom.org" }
+]
+
+[tool.setuptools]
+packages = ["nvmet"]
+script-files = ["nvmetcli"]
+
+[project.optional-dependencies]
+test = [
+    "nose2"
+]

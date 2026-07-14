@@ -10,7 +10,7 @@ Please install the configshell-fb package from
 https://github.com/open-iscsi/configshell-fb first.
 
 nvmetcli can be run directly from the source directory or installed
-using setup.py.
+using pip install .
 
 Common Package Dependencies and Problems
 -----------------------------------------
