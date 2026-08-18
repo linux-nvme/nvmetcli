@@ -5,6 +5,7 @@ build/*
 dist/*
 *.pyc
 *.pyc
+.coverage
 
 # generated documentation
 Documentation/*.1
