@@ -9,7 +9,7 @@ Source:         nvmetcli-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-rpmroot
 BuildArch:      noarch
 BuildRequires:  python3-devel python3-pip python3-build systemd-units
-Requires:	python-configshell python-kmod
+Requires:	python-configshell kmod
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
