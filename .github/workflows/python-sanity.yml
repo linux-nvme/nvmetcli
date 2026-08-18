@@ -37,3 +37,6 @@ jobs:
 
       - name: pylint
         run: python3 -m pylint --enable=E nvmet/ nvmetcli
+
+      - name: mypy
+        run: python3 -m mypy
