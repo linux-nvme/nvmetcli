@@ -15,8 +15,8 @@ if [ -z "$VER" ]; then
 fi
 
 make clean
-sed -i "s/version =.*,/version = $VER,/" setup.py
-git add setup.py
+sed -i "s/^version = .*/version = \"$VER\"/" pyproject.toml
+git add pyproject.toml
 git commit -m "bump version to v$VER"
 
 git tag -s "v$VER" -m "nvmetcli release v$VER"
