@@ -6,6 +6,7 @@ import os
 import random
 import stat
 import string
+import tempfile
 import unittest
 from nvmet import nvme
 
@@ -14,14 +15,58 @@ from nvmet import nvme
 NVMET_TEST_DEVICES = os.getenv("NVMET_TEST_DEVICES",
                                "/dev/ram0,/dev/ram1").split(',')
 
+# Size used for the sparse backing files created when a test needs more
+# backing devices than are configured/present.
+TEMP_BACKING_FILE_SIZE = 512 * 1024 * 1024
 
-def test_devices_present():
+
+def _is_usable_device(path):
     '''
-    Check if the test devices are present.
+    Return True if 'path' is usable as a namespace backing device (a
+    block device or a regular file). Any OSError from stat() (missing
+    path, permission denied, races, ...) is treated as "not usable"
+    rather than propagated.
     '''
-    return len([x for x in NVMET_TEST_DEVICES
-                if os.path.exists(x) and
-                (stat.S_ISBLK(os.stat(x).st_mode) or os.path.isfile(x))]) >= 2
+    try:
+        st = os.stat(path)
+    except OSError:
+        return False
+    return stat.S_ISBLK(st.st_mode) or stat.S_ISREG(st.st_mode)
+
+
+def _usable_devices():
+    '''
+    Return the subset of NVMET_TEST_DEVICES that are usable as a
+    namespace backing device.
+    '''
+    return [x for x in NVMET_TEST_DEVICES if _is_usable_device(x)]
+
+
+def _make_temp_backing_file():
+    '''
+    Create a temporary sparse file suitable for use as a namespace
+    backing file, equivalent to 'truncate --size=512M'.
+    '''
+    fd, path = tempfile.mkstemp(prefix='nvmet-test-ns-', suffix='.img')
+    os.close(fd)
+    os.truncate(path, TEMP_BACKING_FILE_SIZE)
+    return path
+
+
+def get_test_devices(count, testcase):
+    '''
+    Return a list of 'count' backing devices to use for namespaces.
+
+    Configured/present devices (see NVMET_TEST_DEVICES) are preferred;
+    any additional devices needed are created as temporary sparse files
+    and scheduled for removal via testcase.addCleanup().
+    '''
+    devices = _usable_devices()
+    while len(devices) < count:
+        path = _make_temp_backing_file()
+        testcase.addCleanup(os.remove, path)
+        devices.append(path)
+    return devices
 
 
 class TestNvmet(unittest.TestCase):
@@ -129,13 +174,12 @@ class TestNvmet(unittest.TestCase):
             n.delete()
         self.assertEqual(len(list(s.namespaces)), 0)
 
-    @unittest.skipUnless(test_devices_present(),
-                         f"Devices {','.join(NVMET_TEST_DEVICES)} "
-                         f"not available or suitable")
     def test_namespace_attrs(self):
         '''
         Test Namespace attributes.
         '''
+        devices = get_test_devices(2, self)
+
         root = nvme.Root()
         root.clear_existing()
 
@@ -150,7 +194,7 @@ class TestNvmet(unittest.TestCase):
         self.assertRaises(nvme.CFSError, n.set_enable, 1)
 
         # now set a path and enable
-        n.set_attr('device', 'path', NVMET_TEST_DEVICES[0])
+        n.set_attr('device', 'path', devices[0])
         n.set_enable(1)
         self.assertTrue(n.get_enable())
 
@@ -159,7 +203,7 @@ class TestNvmet(unittest.TestCase):
 
         # test that we can't write to attrs while enabled
         self.assertRaises(nvme.CFSError, n.set_attr, 'device', 'path',
-                          NVMET_TEST_DEVICES[1])
+                          devices[1])
         self.assertRaises(nvme.CFSError, n.set_attr, 'device', 'nguid',
                           '15f7767b-50e7-4441-949c-75b99153dea7')
 
@@ -458,13 +502,12 @@ class TestNvmet(unittest.TestCase):
         self.assertRaises(nvme.CFSError, nvme.Port,
                           portid=1 << 17, mode='create')
 
-    @unittest.skipUnless(test_devices_present(),
-                         f"Devices {','.join(NVMET_TEST_DEVICES)} not "
-                         f"available or suitable")
     def test_save_restore(self):
         '''
         Test save and restore functionality.
         '''
+        devices = get_test_devices(1, self)
+
         root = nvme.Root()
         root.clear_existing()
 
@@ -478,7 +521,7 @@ class TestNvmet(unittest.TestCase):
         s2.set_attr('attr', 'allow_any_host', 1)
 
         n = nvme.Namespace(s, nsid=42, mode='create')
-        n.set_attr('device', 'path', NVMET_TEST_DEVICES[0])
+        n.set_attr('device', 'path', devices[0])
         n.set_enable(1)
 
         nguid = n.get_attr('device', 'nguid')
@@ -516,7 +559,7 @@ class TestNvmet(unittest.TestCase):
 
         # and check everything is still the same
         self.assertTrue(n.get_enable())
-        self.assertEqual(n.get_attr('device', 'path'), NVMET_TEST_DEVICES[0])
+        self.assertEqual(n.get_attr('device', 'path'), devices[0])
         self.assertEqual(n.get_attr('device', 'nguid'), nguid)
 
         self.assertEqual(h.get_attr('dhchap', 'dhgroup'), 'ffdhe2048')
