@@ -18,18 +18,19 @@ License for the specific language governing permissions and limitations
 under the License.
 '''
 
-from __future__ import print_function
+from __future__ import annotations
 
 import os
 import sys
 import errno
 from string import hexdigits
+from typing import Any, Callable
 import uuid
 import configshell
 import nvmet as nvme
 
 
-def nguid_set(nguid):
+def nguid_set(nguid: str) -> bool:
     '''
     Check if the nguid is set.
     '''
@@ -40,7 +41,9 @@ class UINode(configshell.ConfigNode):
     '''
     A node in the UI.
     '''
-    def __init__(self, name, parent=None, cfnode=None, shell=None):
+    def __init__(self, name: str, parent: UINode | None = None,
+                 cfnode: nvme.CFSNode | None = None,
+                 shell: Any = None) -> None:
         configshell.ConfigNode.__init__(self, name, parent, shell)
         self.cfnode = cfnode
         if self.cfnode:
@@ -49,7 +52,8 @@ class UINode(configshell.ConfigNode):
                     self._init_group(group)
         self.refresh()
 
-    def _init_group(self, group):
+    def _init_group(self, group: str) -> None:
+        assert self.cfnode is not None
         setattr(self.__class__, f"ui_getgroup_{group}",
                 lambda self, attr:
                     self.cfnode.get_attr(group, attr))
@@ -66,25 +70,25 @@ class UINode(configshell.ConfigNode):
             t, d = getattr(self.__class__, name, {}).get(attr, ('string', ''))
             self.define_config_group_param(group, attr, t, d, writable)
 
-    def refresh(self):
+    def refresh(self) -> None:
         '''
         Refreshes and updates the objects tree from the current path.
         '''
-        self._children = set([])
+        self._children: set[UINode] = set()
 
-    def status(self):
+    def status(self) -> str:
         '''
         Displays the current node's status summary.
         '''
         return "None"
 
-    def ui_command_refresh(self):
+    def ui_command_refresh(self) -> None:
         '''
         Refreshes and updates the objects tree from the current path.
         '''
         self.refresh()
 
-    def ui_command_status(self):
+    def ui_command_status(self) -> None:
         '''
         Displays the current node's status summary.
 
@@ -94,7 +98,7 @@ class UINode(configshell.ConfigNode):
         '''
         self.shell.log.info(f"Status for {self.path}: {self.status()}")
 
-    def ui_command_saveconfig(self, savefile=None):
+    def ui_command_saveconfig(self, savefile: str | None = None) -> None:
         '''
         Saves the current configuration to a file so that it can be restored
         on next boot.
@@ -102,6 +106,7 @@ class UINode(configshell.ConfigNode):
         node = self
         while node.parent is not None:
             node = node.parent
+        assert isinstance(node.cfnode, nvme.Root)
         node.cfnode.save_to_file(savefile)
 
 
@@ -113,11 +118,12 @@ class UIRootNode(UINode):
         'nqn': ('string', 'Discovery NQN'),
     }
 
-    def __init__(self, shell):
-        UINode.__init__(self, '/', parent=None, cfnode=nvme.Root(),
-                        shell=shell)
+    def __init__(self, shell: Any) -> None:
+        root = nvme.Root()
+        UINode.__init__(self, '/', parent=None, cfnode=root, shell=shell)
+        self.cfnode: nvme.Root = root
 
-    def summary(self):
+    def summary(self) -> tuple[str, bool]:
         '''
         Returns a summary of the root node.
         '''
@@ -128,7 +134,7 @@ class UIRootNode(UINode):
             pass
         return (", ".join(info), True)
 
-    def refresh(self):
+    def refresh(self) -> None:
         '''
         Refreshes and updates the objects tree from the current path.
         '''
@@ -137,7 +143,8 @@ class UIRootNode(UINode):
         UIPortsNode(self)
         UIHostsNode(self)
 
-    def ui_command_restoreconfig(self, savefile=None, clear_existing=False):
+    def ui_command_restoreconfig(self, savefile: str | None = None,
+                                 clear_existing: bool = False) -> None:
         '''
         Restores configuration from a file.
         '''
@@ -153,10 +160,10 @@ class UISubsystemsNode(UINode):
     '''
     A node in the UI representing the subsystems.
     '''
-    def __init__(self, parent):
+    def __init__(self, parent: UINode) -> None:
         UINode.__init__(self, 'subsystems', parent)
 
-    def refresh(self):
+    def refresh(self) -> None:
         '''
         Refreshes and updates the objects tree from the current path.
         '''
@@ -164,7 +171,7 @@ class UISubsystemsNode(UINode):
         for subsys in self.parent.cfnode.subsystems:
             UISubsystemNode(self, subsys)
 
-    def ui_command_create(self, nqn=None):
+    def ui_command_create(self, nqn: str | None = None) -> None:
         '''
         Creates a new target. If I{nqn} is omitted, then the new Subsystem
         will be created using a randomly generated NQN.
@@ -176,7 +183,7 @@ class UISubsystemsNode(UINode):
         subsystem = nvme.Subsystem(nqn, mode='create')
         UISubsystemNode(self, subsystem)
 
-    def ui_command_delete(self, nqn):
+    def ui_command_delete(self, nqn: str) -> None:
         '''
         Recursively deletes the subsystem with the specified I{nqn}, and all
         objects hanging under it.
@@ -200,10 +207,11 @@ class UISubsystemNode(UINode):
         'version': ('string', 'Export version number to hosts'),
     }
 
-    def __init__(self, parent, cfnode):
+    def __init__(self, parent: UINode, cfnode: nvme.Subsystem) -> None:
         UINode.__init__(self, cfnode.nqn, parent, cfnode)
+        self.cfnode: nvme.Subsystem = cfnode
 
-    def refresh(self):
+    def refresh(self) -> None:
         '''
         Refreshes and updates the objects tree from the current path.
         '''
@@ -213,7 +221,7 @@ class UISubsystemNode(UINode):
         if self.cfnode.has_passthru():
             UIPassthruNode(self)
 
-    def summary(self):
+    def summary(self) -> tuple[str, bool]:
         '''
         Returns a summary of the subsystem.
         '''
@@ -233,17 +241,18 @@ class UIPassthruNode(UINode):
         'path': ('string', 'Passthru device path')
     }
 
-    def __init__(self, parent):
+    def __init__(self, parent: UISubsystemNode) -> None:
         passthru = nvme.Passthru(parent.cfnode)
         UINode.__init__(self, 'passthru', parent, passthru)
+        self.cfnode: nvme.Passthru = passthru
 
-    def refresh(self):
+    def refresh(self) -> None:
         '''
         Refreshes and updates the objects tree from the current path.
         '''
         self._children = set([])
 
-    def ui_command_enable(self):
+    def ui_command_enable(self) -> None:
         '''
         Enables the passthru.
         '''
@@ -257,7 +266,7 @@ class UIPassthruNode(UINode):
                 raise configshell.ExecutionError(
                     "The passthru could not be enabled.") from exc
 
-    def ui_command_disable(self):
+    def ui_command_disable(self) -> None:
         '''
         Disables the passthru.
         '''
@@ -271,7 +280,7 @@ class UIPassthruNode(UINode):
                 raise configshell.ExecutionError(
                     "The passthru could not be disabled.") from exc
 
-    def ui_command_clear_ids(self, clear_id):
+    def ui_command_clear_ids(self, clear_id: Any) -> None:
         '''
         If I{clear_id} is set to non-zero then clears the passthru namespace
         unique identifiers EUI/GUID/UUID.
@@ -282,7 +291,7 @@ class UIPassthruNode(UINode):
             raise configshell.ExecutionError(
                 "Failed to set clear_ids for this passthru target.") from exc
 
-    def ui_command_admin_timeout(self, timeout):
+    def ui_command_admin_timeout(self, timeout: Any) -> None:
         '''
         Sets the timeout of admin passthru command.
         '''
@@ -292,7 +301,7 @@ class UIPassthruNode(UINode):
             raise configshell.ExecutionError(
                 "Failed to set the admin passthru command timeout.") from exc
 
-    def ui_command_io_timeout(self, timeout):
+    def ui_command_io_timeout(self, timeout: Any) -> None:
         '''
         Sets the timeout of IO passthru command.
         '''
@@ -302,7 +311,7 @@ class UIPassthruNode(UINode):
             raise configshell.ExecutionError(
                 "Failed to set the IO passthru command timeout.") from exc
 
-    def summary(self):
+    def summary(self) -> tuple[str, bool]:
         info = []
         info.append("path=" + self.cfnode.get_attr("device", "path"))
         if self.cfnode.ids != 0:
@@ -319,10 +328,10 @@ class UINamespacesNode(UINode):
     '''
     A node in the UI representing the namespaces.
     '''
-    def __init__(self, parent):
+    def __init__(self, parent: UINode) -> None:
         UINode.__init__(self, 'namespaces', parent)
 
-    def refresh(self):
+    def refresh(self) -> None:
         '''
         Refreshes and updates the objects tree from the current path.
         '''
@@ -330,7 +339,7 @@ class UINamespacesNode(UINode):
         for ns in self.parent.cfnode.namespaces:
             UINamespaceNode(self, ns)
 
-    def ui_command_create(self, nsid=None):
+    def ui_command_create(self, nsid: Any | None = None) -> None:
         '''
         Creates a new namespace. If I{nsid} is omitted, then the next
         available namespace id will be used.
@@ -342,7 +351,7 @@ class UINamespacesNode(UINode):
         namespace = nvme.Namespace(self.parent.cfnode, nsid, mode='create')
         UINamespaceNode(self, namespace)
 
-    def ui_command_delete(self, nsid):
+    def ui_command_delete(self, nsid: Any) -> None:
         '''
         Recursively deletes the namespace with the specified I{nsid}, and all
         objects hanging under it.
@@ -366,10 +375,11 @@ class UINamespaceNode(UINode):
         'uuid': ('string', 'Namespace Universally Unique Identifier.'),
     }
 
-    def __init__(self, parent, cfnode):
+    def __init__(self, parent: UINode, cfnode: nvme.Namespace) -> None:
         UINode.__init__(self, str(cfnode.nsid), parent, cfnode)
+        self.cfnode: nvme.Namespace = cfnode
 
-    def status(self):
+    def status(self) -> str:
         '''
         Returns the status of the namespace.
         '''
@@ -377,7 +387,7 @@ class UINamespaceNode(UINode):
             return "enabled"
         return "disabled"
 
-    def ui_command_enable(self):
+    def ui_command_enable(self) -> None:
         '''
         Enables the current Namespace.
 
@@ -395,7 +405,7 @@ class UINamespaceNode(UINode):
                 raise configshell.ExecutionError(
                     "The Namespace could not be enabled.") from exc
 
-    def ui_command_disable(self):
+    def ui_command_disable(self) -> None:
         '''
         Disables the current Namespace.
 
@@ -413,7 +423,7 @@ class UINamespaceNode(UINode):
                 raise configshell.ExecutionError(
                     "The Namespace could not be enabled.") from exc
 
-    def ui_command_grpid(self, grpid):
+    def ui_command_grpid(self, grpid: Any) -> None:
         '''
         Sets the ANA Group ID of the current Namespace to I{grpid}
         '''
@@ -423,7 +433,7 @@ class UINamespaceNode(UINode):
             raise configshell.ExecutionError(
                 "Failed to set ANA Group ID for this Namespace.") from exc
 
-    def summary(self):
+    def summary(self) -> tuple[str, Any]:
         info = []
         info.append("path=" + self.cfnode.get_attr("device", "path"))
         ns_uuid = self.cfnode.get_attr("device", "uuid")
@@ -448,10 +458,10 @@ class UIAllowedHostsNode(UINode):
     '''
     A node in the UI representing the allowed hosts.
     '''
-    def __init__(self, parent):
+    def __init__(self, parent: UINode) -> None:
         UINode.__init__(self, 'allowed_hosts', parent)
 
-    def refresh(self):
+    def refresh(self) -> None:
         '''
         Refreshes and updates the objects tree from the current path.
         '''
@@ -459,7 +469,7 @@ class UIAllowedHostsNode(UINode):
         for host in self.parent.cfnode.allowed_hosts:
             UIAllowedHostNode(self, host)
 
-    def ui_command_create(self, nqn):
+    def ui_command_create(self, nqn: str) -> None:
         '''
         Grants access to parent subsystems to the host specified by I{nqn}.
 
@@ -470,7 +480,8 @@ class UIAllowedHostsNode(UINode):
         self.parent.cfnode.add_allowed_host(nqn)
         UIAllowedHostNode(self, nqn)
 
-    def ui_complete_create(self, _parameters, _text, current_param):
+    def ui_complete_create(self, _parameters: dict[str, Any], _text: str,
+                           current_param: str) -> list[str]:
         '''
         Completes the create command.
         '''
@@ -483,7 +494,7 @@ class UIAllowedHostsNode(UINode):
             return [f"{completions[0]} "]
         return completions
 
-    def ui_command_delete(self, nqn):
+    def ui_command_delete(self, nqn: str) -> None:
         '''
         Recursively deletes the namespace with the specified I{nsid}, and all
         objects hanging under it.
@@ -495,7 +506,8 @@ class UIAllowedHostsNode(UINode):
         self.parent.cfnode.remove_allowed_host(nqn)
         self.refresh()
 
-    def ui_complete_delete(self, _parameters, _text, current_param):
+    def ui_complete_delete(self, _parameters: dict[str, Any], _text: str,
+                           current_param: str) -> list[str]:
         '''
         Completes the delete command.
         '''
@@ -513,7 +525,7 @@ class UIAllowedHostNode(UINode):
     '''
     A node in the UI representing an allowed host.
     '''
-    def __init__(self, parent, nqn):
+    def __init__(self, parent: UINode, nqn: str) -> None:
         UINode.__init__(self, nqn, parent)
 
 
@@ -521,10 +533,10 @@ class UIPortsNode(UINode):
     '''
     A node in the UI representing the ports.
     '''
-    def __init__(self, parent):
+    def __init__(self, parent: UINode) -> None:
         UINode.__init__(self, 'ports', parent)
 
-    def refresh(self):
+    def refresh(self) -> None:
         '''
         Refreshes and updates the objects tree from the current path.
         '''
@@ -532,7 +544,7 @@ class UIPortsNode(UINode):
         for port in self.parent.cfnode.ports:
             UIPortNode(self, port)
 
-    def ui_command_create(self, portid=None):
+    def ui_command_create(self, portid: Any | None = None) -> None:
         '''
         Creates a new NVMe port with portid I{portid}.
 
@@ -543,7 +555,7 @@ class UIPortsNode(UINode):
         port = nvme.Port(portid, mode='create')
         UIPortNode(self, port)
 
-    def ui_command_delete(self, portid):
+    def ui_command_delete(self, portid: Any) -> None:
         '''
         Recursively deletes the NVMe Port with the specified I{port}, and all
         objects hanging under it.
@@ -573,8 +585,9 @@ class UIPortNode(UINode):
         'inline_data_size': ('string', 'Port inline data size in bytes'),
     }
 
-    def __init__(self, parent, cfnode):
+    def __init__(self, parent: UINode, cfnode: nvme.Port) -> None:
         UINode.__init__(self, str(cfnode.portid), parent, cfnode)
+        self.cfnode: nvme.Port = cfnode
         UIPortSubsystemsNode(self)
         try:
             next(cfnode.ana_groups)
@@ -584,7 +597,7 @@ class UIPortNode(UINode):
             UIANAGroupsNode(self)
         UIReferralsNode(self)
 
-    def summary(self):
+    def summary(self) -> tuple[str, Any]:
         '''
         Returns a summary of the port.
         '''
@@ -610,10 +623,10 @@ class UIPortSubsystemsNode(UINode):
     '''
     A node in the UI representing the port subsystems.
     '''
-    def __init__(self, parent):
+    def __init__(self, parent: UINode) -> None:
         UINode.__init__(self, 'subsystems', parent)
 
-    def refresh(self):
+    def refresh(self) -> None:
         '''
         Refreshes and updates the objects tree from the current path.
         '''
@@ -621,7 +634,7 @@ class UIPortSubsystemsNode(UINode):
         for host in self.parent.cfnode.subsystems:
             UIPortSubsystemNode(self, host)
 
-    def ui_command_create(self, nqn):
+    def ui_command_create(self, nqn: str) -> None:
         '''
         Grants access to the subsystem specified by I{nqn} through the
         parent port.
@@ -633,7 +646,8 @@ class UIPortSubsystemsNode(UINode):
         self.parent.cfnode.add_subsystem(nqn)
         UIPortSubsystemNode(self, nqn)
 
-    def ui_complete_create(self, _parameters, _text, current_param):
+    def ui_complete_create(self, _parameters: dict[str, Any], _text: str,
+                           current_param: str) -> list[str]:
         '''
         Completes the create command.
         '''
@@ -646,7 +660,7 @@ class UIPortSubsystemsNode(UINode):
             return [f"{completions[0]} "]
         return completions
 
-    def ui_command_delete(self, nqn):
+    def ui_command_delete(self, nqn: str) -> None:
         '''
         Removes access to the subsystem specified by I{nqn} through the
         parent port.
@@ -658,7 +672,8 @@ class UIPortSubsystemsNode(UINode):
         self.parent.cfnode.remove_subsystem(nqn)
         self.refresh()
 
-    def ui_complete_delete(self, _parameters, _text, current_param):
+    def ui_complete_delete(self, _parameters: dict[str, Any], _text: str,
+                           current_param: str) -> list[str]:
         '''
         Completes the delete command.
         '''
@@ -676,7 +691,7 @@ class UIPortSubsystemNode(UINode):
     '''
     A node in the UI representing a port subsystem.
     '''
-    def __init__(self, parent, nqn):
+    def __init__(self, parent: UINode, nqn: str) -> None:
         UINode.__init__(self, nqn, parent)
 
 
@@ -684,10 +699,10 @@ class UIReferralsNode(UINode):
     '''
     A node in the UI representing the referrals.
     '''
-    def __init__(self, parent):
+    def __init__(self, parent: UINode) -> None:
         UINode.__init__(self, 'referrals', parent)
 
-    def refresh(self):
+    def refresh(self) -> None:
         '''
         Refreshes and updates the objects tree from the current path.
         '''
@@ -695,7 +710,7 @@ class UIReferralsNode(UINode):
         for r in self.parent.cfnode.referrals:
             UIReferralNode(self, r)
 
-    def ui_command_create(self, name):
+    def ui_command_create(self, name: str) -> None:
         '''
         Creates a new referral.
 
@@ -706,7 +721,7 @@ class UIReferralsNode(UINode):
         r = nvme.Referral(self.parent.cfnode, name, mode='create')
         UIReferralNode(self, r)
 
-    def ui_command_delete(self, name):
+    def ui_command_delete(self, name: str) -> None:
         '''
         Deletes the referral with the specified I{name}.
 
@@ -733,10 +748,11 @@ class UIReferralNode(UINode):
         'portid': ('number', 'Port identifier'),
     }
 
-    def __init__(self, parent, cfnode):
+    def __init__(self, parent: UINode, cfnode: nvme.Referral) -> None:
         UINode.__init__(self, cfnode.name, parent, cfnode)
+        self.cfnode: nvme.Referral = cfnode
 
-    def status(self):
+    def status(self) -> str:
         '''
         Returns the status of the referral.
         '''
@@ -744,7 +760,7 @@ class UIReferralNode(UINode):
             return "enabled"
         return "disabled"
 
-    def ui_command_enable(self):
+    def ui_command_enable(self) -> None:
         '''
         Enables the current Referral.
 
@@ -762,7 +778,7 @@ class UIReferralNode(UINode):
                 raise configshell.ExecutionError(
                     "The Referral could not be enabled.") from exc
 
-    def ui_command_disable(self):
+    def ui_command_disable(self) -> None:
         '''
         Disables the current Referral.
 
@@ -785,10 +801,10 @@ class UIANAGroupsNode(UINode):
     '''
     A node in the UI representing the ANA groups.
     '''
-    def __init__(self, parent):
+    def __init__(self, parent: UINode) -> None:
         UINode.__init__(self, 'ana_groups', parent)
 
-    def refresh(self):
+    def refresh(self) -> None:
         '''
         Refreshes and updates the objects tree from the current path.
         '''
@@ -796,7 +812,7 @@ class UIANAGroupsNode(UINode):
         for a in self.parent.cfnode.ana_groups:
             UIANAGroupNode(self, a)
 
-    def ui_command_create(self, grpid):
+    def ui_command_create(self, grpid: Any) -> None:
         '''
         Creates a new ANA Group.
 
@@ -807,7 +823,7 @@ class UIANAGroupsNode(UINode):
         a = nvme.ANAGroup(self.parent.cfnode, grpid, mode='create')
         UIANAGroupNode(self, a)
 
-    def ui_command_delete(self, grpid):
+    def ui_command_delete(self, grpid: Any) -> None:
         '''
         Deletes the ANA Group with the specified I{name}.
 
@@ -828,10 +844,11 @@ class UIANAGroupNode(UINode):
         'state': ('string', 'ANA state'),
     }
 
-    def __init__(self, parent, cfnode):
+    def __init__(self, parent: UINode, cfnode: nvme.ANAGroup) -> None:
         UINode.__init__(self, str(cfnode.grpid), parent, cfnode)
+        self.cfnode: nvme.ANAGroup = cfnode
 
-    def summary(self):
+    def summary(self) -> tuple[str, bool]:
         '''
         Returns a summary of the ANA group.
         '''
@@ -844,10 +861,10 @@ class UIHostsNode(UINode):
     '''
     A node in the UI representing the hosts.
     '''
-    def __init__(self, parent):
+    def __init__(self, parent: UINode) -> None:
         UINode.__init__(self, 'hosts', parent)
 
-    def refresh(self):
+    def refresh(self) -> None:
         '''
         Refreshes and updates the objects tree from the current path.
         '''
@@ -855,7 +872,7 @@ class UIHostsNode(UINode):
         for host in self.parent.cfnode.hosts:
             UIHostNode(self, host)
 
-    def ui_command_create(self, nqn):
+    def ui_command_create(self, nqn: str) -> None:
         '''
         Creates a new NVMe host.
 
@@ -866,7 +883,7 @@ class UIHostsNode(UINode):
         host = nvme.Host(nqn, mode='create')
         UIHostNode(self, host)
 
-    def ui_command_delete(self, nqn):
+    def ui_command_delete(self, nqn: str) -> None:
         '''
         Recursively deletes the NVMe Host with the specified I{nqn}, and all
         objects hanging under it.
@@ -884,11 +901,12 @@ class UIHostNode(UINode):
     '''
     A node in the UI representing a host.
     '''
-    def __init__(self, parent, cfnode):
+    def __init__(self, parent: UINode, cfnode: nvme.Host) -> None:
         UINode.__init__(self, cfnode.nqn, parent, cfnode)
+        self.cfnode: nvme.Host = cfnode
 
 
-def usage():
+def usage() -> None:
     '''
     Prints the usage message.
     '''
@@ -900,14 +918,14 @@ def usage():
     sys.exit(-1)
 
 
-def save(to_file):
+def save(to_file: str | None) -> None:
     '''
     Saves the configuration to a file.
     '''
     nvme.Root().save_to_file(to_file)
 
 
-def restore(from_file):
+def restore(from_file: str | None) -> None:
     '''
     Restores the configuration from a file.
     '''
@@ -935,14 +953,14 @@ def restore(from_file):
     sys.exit(0)
 
 
-def clear(_unused):
+def clear(_unused: str | None) -> None:
     '''
     Clears the configuration.
     '''
     nvme.Root().clear_existing()
 
 
-def execute_cmd(cmd):
+def execute_cmd(cmd: str) -> None:
     '''
     Executes a command in the shell.
     '''
@@ -952,10 +970,12 @@ def execute_cmd(cmd):
     sys.exit(0)
 
 
-funcs = {'save': save, 'restore': restore, 'clear': clear}
+funcs: dict[str, Callable[[str | None], None]] = {
+    'save': save, 'restore': restore, 'clear': clear,
+}
 
 
-def main():
+def main() -> None:
     '''
     The main function.
     '''
@@ -994,3 +1014,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# pylint: disable=too-many-lines

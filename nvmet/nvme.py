@@ -18,6 +18,8 @@ License for the specific language governing permissions and limitations
 under the License.
 '''
 
+from __future__ import annotations
+
 import os
 import stat
 import uuid
@@ -26,8 +28,11 @@ import subprocess
 import shlex
 from doctest import testmod
 from glob import iglob as glob
+from typing import Any, Callable, Iterator
 
 DEFAULT_SAVE_FILE = '/etc/nvmet/config.json'
+
+ErrFunc = Callable[[str], None]
 
 
 class CFSError(Exception):
@@ -54,30 +59,34 @@ class CFSNode:
 
     configfs_dir = '/sys/kernel/config/nvmet'
 
-    def __init__(self):
-        self._path = self.configfs_dir
-        self._enable = None
-        self.attr_groups = []
+    def __init__(self) -> None:
+        self._path: str = self.configfs_dir
+        self._enable: int | None = None
+        self.attr_groups: list[str] = []
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         '''
         Checks if two CFSNode objects are equal.
         '''
+        if not isinstance(other, CFSNode):
+            return NotImplemented
         return self._path == other._path
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         '''
         Checks if two CFSNode objects are not equal.
         '''
+        if not isinstance(other, CFSNode):
+            return NotImplemented
         return self._path != other._path
 
-    def _get_path(self):
+    def _get_path(self) -> str:
         '''
         Returns the path of the CFSNode.
         '''
         return self._path
 
-    def _create_in_cfs(self, mode):
+    def _create_in_cfs(self, mode: str) -> None:
         '''
         Creates the configFS node if it does not already exist, depending on
         the mode.
@@ -102,13 +111,13 @@ class CFSNode:
                                f" in configFS") from exc
         self.get_enable()
 
-    def _exists(self):
+    def _exists(self) -> bool:
         '''
         Returns True if the CFSNode exists, False otherwise.
         '''
         return os.path.isdir(self.path)
 
-    def _check_self(self):
+    def _check_self(self) -> None:
         '''
         Checks if the CFSNode exists.
         '''
@@ -116,7 +125,7 @@ class CFSNode:
             raise CFSNotFound(f"This {self.__class__.__name__} does not "
                               f"exist in configFS")
 
-    def list_attrs(self, group, writable=None):
+    def list_attrs(self, group: str, writable: bool | None = None) -> list[str]:
         '''
         @param group: The attribute group
         @param writable: If None (default), returns all attributes, if True,
@@ -141,14 +150,14 @@ class CFSNode:
         names.sort()
         return names
 
-    def _attr_is_writable(self, group, name):
+    def _attr_is_writable(self, group: str, name: str) -> int:
         '''
         Returns True if the attribute is writable, False otherwise.
         '''
         s = os.stat(f"{self._path}/{group}_{name}")
         return s[stat.ST_MODE] & stat.S_IWUSR
 
-    def set_attr(self, group, attribute, value):
+    def set_attr(self, group: str, attribute: str, value: Any) -> None:
         '''
         Sets the value of a named attribute.
         The attribute must exist in configFS.
@@ -173,7 +182,7 @@ class CFSNode:
         except OSError as e:
             raise CFSError(f"Cannot set attribute {path}: {e}") from e
 
-    def get_attr(self, group, attribute):
+    def get_attr(self, group: str, attribute: str) -> str:
         '''
         Gets the value of a named attribute.
         @param group: The attribute group
@@ -188,7 +197,7 @@ class CFSNode:
         with open(path, 'r', encoding="utf-8") as file_fd:
             return file_fd.read().strip()
 
-    def get_enable(self):
+    def get_enable(self) -> int | None:
         '''
         Returns the value of the 'enable' attribute.
         '''
@@ -201,7 +210,7 @@ class CFSNode:
             self._enable = int(file_fd.read().strip())
         return self._enable
 
-    def set_enable(self, value):
+    def set_enable(self, value: Any) -> None:
         '''
         Sets the value of the 'enable' attribute.
         '''
@@ -218,7 +227,7 @@ class CFSNode:
             raise CFSError(f"Cannot enable {self.path}: {e} ({value})") from e
         self._enable = value
 
-    def delete(self):
+    def delete(self) -> None:
         '''
         If the underlying configFS object does not exist, this method does
         nothing. If the underlying configFS object exists, this method attempts
@@ -235,11 +244,11 @@ class CFSNode:
                       + " deleted either by calling the delete() method, or by"
                       + " any other means, it will be False.")
 
-    def dump(self):
+    def dump(self) -> dict[str, Any]:
         '''
         Returns a dict with the config of the object.
         '''
-        d = {}
+        d: dict[str, Any] = {}
         for group in self.attr_groups:
             a = {}
             for i in self.list_attrs(group, writable=True):
@@ -249,7 +258,8 @@ class CFSNode:
             d['enable'] = self._enable
         return d
 
-    def _setup_attrs(self, attr_dict, err_func):
+    def _setup_attrs(self, attr_dict: dict[str, Any],
+                     err_func: ErrFunc) -> None:
         '''
         Set up attributes from a dict.
         '''
@@ -268,7 +278,7 @@ class Root(CFSNode):
     '''
     The root of the NVMe target configfs hierarchy.
     '''
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         self.attr_groups = ['discovery']
@@ -281,7 +291,7 @@ class Root(CFSNode):
         self._path = self.configfs_dir
         self._create_in_cfs('lookup')
 
-    def _modprobe(self, modname):
+    def _modprobe(self, modname: str) -> None:
         '''
         Load a kernel module.
         '''
@@ -298,7 +308,7 @@ class Root(CFSNode):
         except OSError:
             pass
 
-    def _list_subsystems(self):
+    def _list_subsystems(self) -> Iterator[Subsystem]:
         self._check_self()
 
         for d in os.listdir(f"{self._path}/subsystems/"):
@@ -307,7 +317,7 @@ class Root(CFSNode):
     subsystems = property(_list_subsystems,
                           doc="Get the list of Subsystems.")
 
-    def _list_ports(self):
+    def _list_ports(self) -> Iterator[Port]:
         self._check_self()
 
         for d in os.listdir(f"{self._path}/ports/"):
@@ -316,7 +326,7 @@ class Root(CFSNode):
     ports = property(_list_ports,
                      doc="Get the list of Ports.")
 
-    def _list_hosts(self):
+    def _list_hosts(self) -> Iterator[Host]:
         self._check_self()
 
         for h in os.listdir(f"{self._path}/hosts/"):
@@ -325,7 +335,7 @@ class Root(CFSNode):
     hosts = property(_list_hosts,
                      doc="Get the list of Hosts.")
 
-    def save_to_file(self, savefile=None):
+    def save_to_file(self, savefile: str | None = None) -> None:
         '''
         Write the configuration in json format to a file.
         '''
@@ -357,7 +367,7 @@ class Root(CFSNode):
             if dir_fd:
                 os.close(dir_fd)
 
-    def clear_existing(self):
+    def clear_existing(self) -> None:
         '''
         Remove entire current configuration.
         '''
@@ -369,7 +379,8 @@ class Root(CFSNode):
         for h in self.hosts:
             h.delete()
 
-    def restore(self, config, clear_existing=False, abort_on_error=False):
+    def restore(self, config: dict[str, Any], clear_existing: bool = False,
+                abort_on_error: bool = False) -> list[str]:
         '''
         Takes a dict generated by dump() and reconfigures the target to match.
         Returns list of non-fatal errors that were encountered.
@@ -382,13 +393,14 @@ class Root(CFSNode):
             if any(self.subsystems):
                 raise CFSError("subsystems present, not restoring")
 
-        errors = []
+        errors: list[str] = []
 
+        err_func: ErrFunc
         if abort_on_error:
-            def err_func(err_str):
+            def err_func(err_str: str) -> None:
                 raise CFSError(err_str)
         else:
-            def err_func(err_str):
+            def err_func(err_str: str) -> None:
                 errors.append(err_str + ", skipped")
 
         # Create the hosts first because the subsystems reference them
@@ -415,8 +427,9 @@ class Root(CFSNode):
 
         return errors
 
-    def restore_from_file(self, savefile=None, clear_existing=True,
-                          abort_on_error=False):
+    def restore_from_file(self, savefile: str | None = None,
+                          clear_existing: bool = True,
+                          abort_on_error: bool = False) -> list[str]:
         '''
         Restore the configuration from a file in json format.
         Returns a list of non-fatal errors. If abort_on_error is set,
@@ -432,7 +445,7 @@ class Root(CFSNode):
             return self.restore(config, clear_existing=clear_existing,
                                 abort_on_error=abort_on_error)
 
-    def dump(self):
+    def dump(self) -> dict[str, Any]:
         d = super().dump()
         d['subsystems'] = [s.dump() for s in self.subsystems]
         d['ports'] = [p.dump() for p in self.ports]
@@ -446,10 +459,10 @@ class Subsystem(CFSNode):
     A Subsystem is identified by its NQN.
     '''
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Subsystem {self.nqn}>"
 
-    def __init__(self, nqn=None, mode='any'):
+    def __init__(self, nqn: str | None = None, mode: str = 'any') -> None:
         '''
         @param nqn: The Subsystems' NQN.
             If no NQN is specified, one will be generated.
@@ -474,7 +487,7 @@ class Subsystem(CFSNode):
         self._path = f"{self.configfs_dir}/subsystems/{nqn}"
         self._create_in_cfs(mode)
 
-    def _generate_nqn(self):
+    def _generate_nqn(self) -> str:
         '''
         Generates a new NQN.
         '''
@@ -482,7 +495,7 @@ class Subsystem(CFSNode):
         name = str(uuid.uuid4())
         return f"{prefix}:{name}"
 
-    def delete(self):
+    def delete(self) -> None:
         '''
         Recursively deletes a Subsystem object.
         This will delete all attached Namespace objects and then the
@@ -495,7 +508,7 @@ class Subsystem(CFSNode):
             self.remove_allowed_host(h)
         super().delete()
 
-    def _list_namespaces(self):
+    def _list_namespaces(self) -> Iterator[Namespace]:
         '''
         Lists the namespaces of the subsystem.
         '''
@@ -506,7 +519,7 @@ class Subsystem(CFSNode):
     namespaces = property(_list_namespaces,
                           doc="Get the list of Namespaces for the Subsystem.")
 
-    def _get_passthru(self):
+    def _get_passthru(self) -> Passthru:
         '''
         Returns the passthru object of the subsystem.
         '''
@@ -516,7 +529,7 @@ class Subsystem(CFSNode):
     passthru = property(_get_passthru,
                         doc="Get the passthru node for the subsystem")
 
-    def _list_allowed_hosts(self):
+    def _list_allowed_hosts(self) -> list[str]:
         '''
         Lists the allowed hosts of the subsystem.
         '''
@@ -527,7 +540,7 @@ class Subsystem(CFSNode):
                              doc="Get the list of Allowed Hosts for the "
                              + "Subsystem.")
 
-    def add_allowed_host(self, nqn):
+    def add_allowed_host(self, nqn: str) -> None:
         '''
         Enable access for the host identified by I{nqn} to the Subsystem
         '''
@@ -537,7 +550,7 @@ class Subsystem(CFSNode):
         except OSError as e:
             raise CFSError(f"Could not symlink {nqn} in configFS: {e}") from e
 
-    def remove_allowed_host(self, nqn):
+    def remove_allowed_host(self, nqn: str) -> None:
         '''
         Disable access for the host identified by I{nqn} to the Subsystem
         '''
@@ -546,14 +559,14 @@ class Subsystem(CFSNode):
         except OSError as e:
             raise CFSError(f"Could not unlink {nqn} in configFS: {e}") from e
 
-    def has_passthru(self):
+    def has_passthru(self) -> bool:
         '''
         Check if the subsystem has a passthru node.
         '''
         return os.path.isdir(os.path.join(self.path, "passthru"))
 
     @classmethod
-    def setup(cls, t, err_func):
+    def setup(cls, t: dict[str, Any], err_func: ErrFunc) -> None:
         '''
         Set up Subsystem objects based upon t dict, from saved config.
         Guard against missing or bad dict items, but keep going.
@@ -579,7 +592,7 @@ class Subsystem(CFSNode):
 
         s._setup_attrs(t, err_func)
 
-    def dump(self):
+    def dump(self) -> dict[str, Any]:
         d = super().dump()
         d['nqn'] = self.nqn
         d['namespaces'] = [ns.dump() for ns in self.namespaces]
@@ -597,10 +610,11 @@ class Namespace(CFSNode):
 
     MAX_NSID = 8192
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Namespace {self.nsid}>"
 
-    def __init__(self, subsystem, nsid=None, mode='any'):
+    def __init__(self, subsystem: Subsystem, nsid: int | None = None,
+                 mode: str = 'any') -> None:
         '''
         @param subsystem: The parent Subsystem object
         @param nsid: The Namespace identifier
@@ -641,19 +655,19 @@ class Namespace(CFSNode):
         self._path = f"{self.subsystem.path}/namespaces/{self.nsid}"
         self._create_in_cfs(mode)
 
-    def _get_subsystem(self):
+    def _get_subsystem(self) -> Subsystem:
         '''
         Returns the parent subsystem.
         '''
         return self._subsystem
 
-    def _get_nsid(self):
+    def _get_nsid(self) -> int:
         '''
         Returns the namespace ID.
         '''
         return self._nsid
 
-    def _get_grpid(self):
+    def _get_grpid(self) -> int:
         '''
         Returns the ANA group ID.
         '''
@@ -665,7 +679,7 @@ class Namespace(CFSNode):
                 _grpid = int(file_fd.read().strip())
         return _grpid
 
-    def set_grpid(self, grpid):
+    def set_grpid(self, grpid: Any) -> None:
         '''
         Sets the ANA group ID.
         '''
@@ -682,7 +696,8 @@ class Namespace(CFSNode):
     nsid = property(_get_nsid, doc="Get the NSID as an int.")
 
     @classmethod
-    def setup(cls, subsys, n, err_func):
+    def setup(cls, subsys: Subsystem, n: dict[str, Any],
+              err_func: ErrFunc) -> None:
         '''
         Set up a Namespace object based upon n dict, from saved config.
         Guard against missing or bad dict items, but keep going.
@@ -703,7 +718,7 @@ class Namespace(CFSNode):
         if 'ana_grpid' in n:
             ns.set_grpid(int(n['ana_grpid']))
 
-    def dump(self):
+    def dump(self) -> dict[str, Any]:
         '''
         Returns a dict with the config of the object.
         '''
@@ -719,7 +734,7 @@ class Passthru(CFSNode):
     A Passthru is identified by its parent Subsystem.
     '''
 
-    def __init__(self, subsystem):
+    def __init__(self, subsystem: Subsystem) -> None:
         '''
         @param subsystem: The parent Subsystem object.
         @return: A Passthru object.
@@ -728,7 +743,7 @@ class Passthru(CFSNode):
         self._path = f"{subsystem.path}/passthru"
         self.attr_groups = ['device']
 
-    def _get_clear_ids(self):
+    def _get_clear_ids(self) -> int:
         '''
         Get the passthru namespace clear_ids attribute.
         '''
@@ -743,7 +758,7 @@ class Passthru(CFSNode):
     ids = property(_get_clear_ids,
                    doc="Get the passthru namespace clear_ids attribute.")
 
-    def set_clear_ids(self, clear):
+    def set_clear_ids(self, clear: Any) -> None:
         '''
         Set the passthru namespace clear_ids attribute.
         '''
@@ -753,7 +768,7 @@ class Passthru(CFSNode):
             with open(path, 'w', encoding="utf-8") as file_fd:
                 file_fd.write(str(clear))
 
-    def _get_admin_timeout(self):
+    def _get_admin_timeout(self) -> int:
         '''
         Get the passthru admin command timeout.
         '''
@@ -768,7 +783,7 @@ class Passthru(CFSNode):
     admin_timeout = property(_get_admin_timeout,
                              doc="Get the passthru admin command timeout.")
 
-    def set_admin_timeout(self, timeout):
+    def set_admin_timeout(self, timeout: Any) -> None:
         '''
         Set the passthru admin command timeout.
         '''
@@ -778,7 +793,7 @@ class Passthru(CFSNode):
             with open(path, 'w', encoding="utf-8") as file_fd:
                 file_fd.write(str(timeout))
 
-    def _get_io_timeout(self):
+    def _get_io_timeout(self) -> int:
         '''
         Get the passthru IO command timeout.
         '''
@@ -793,7 +808,7 @@ class Passthru(CFSNode):
     io_timeout = property(_get_io_timeout,
                           doc="Get the passthru IO command timeout.")
 
-    def set_io_timeout(self, timeout):
+    def set_io_timeout(self, timeout: Any) -> None:
         '''
         Set the passthru IO command timeout.
         '''
@@ -804,7 +819,8 @@ class Passthru(CFSNode):
                 file_fd.write(str(timeout))
 
     @classmethod
-    def setup(cls, subsys, p, err_func):
+    def setup(cls, subsys: Subsystem, p: dict[str, Any],
+              err_func: ErrFunc) -> None:
         '''
         Set up a Passthru object based upon p dict, from saved config.
         '''
@@ -821,7 +837,7 @@ class Passthru(CFSNode):
         if 'io_timeout' in p:
             pt.set_io_timeout(int(p['io_timeout']))
 
-    def dump(self):
+    def dump(self) -> dict[str, Any]:
         '''
         Returns a dict with the config of the object.
         '''
@@ -839,10 +855,10 @@ class Port(CFSNode):
 
     MAX_PORTID = 8192
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Port {self.portid}>"
 
-    def __init__(self, portid, mode='any'):
+    def __init__(self, portid: Any, mode: str = 'any') -> None:
         super().__init__()
 
         self.attr_groups = ['addr', 'param']
@@ -850,7 +866,7 @@ class Port(CFSNode):
         self._path = f"{self.configfs_dir}/ports/{self._portid}"
         self._create_in_cfs(mode)
 
-    def _get_portid(self):
+    def _get_portid(self) -> int:
         '''
         Returns the port ID.
         '''
@@ -858,7 +874,7 @@ class Port(CFSNode):
 
     portid = property(_get_portid, doc="Get the Port ID as an int.")
 
-    def _list_subsystems(self):
+    def _list_subsystems(self) -> list[str]:
         '''
         Lists the subsystems of the port.
         '''
@@ -868,7 +884,7 @@ class Port(CFSNode):
     subsystems = property(_list_subsystems,
                           doc="Get the list of Subsystem for this Port.")
 
-    def add_subsystem(self, nqn):
+    def add_subsystem(self, nqn: str) -> None:
         '''
         Enable access to the Subsystem identified by I{nqn} through this Port.
         '''
@@ -878,7 +894,7 @@ class Port(CFSNode):
         except OSError as e:
             raise CFSError(f"Could not symlink {nqn} in configFS: {e}") from e
 
-    def remove_subsystem(self, nqn):
+    def remove_subsystem(self, nqn: str) -> None:
         '''
         Disable access to the Subsystem identified by I{nqn} through this Port.
         '''
@@ -887,7 +903,7 @@ class Port(CFSNode):
         except OSError as e:
             raise CFSError(f"Could not unlink {nqn} in configFS: {e}") from e
 
-    def delete(self):
+    def delete(self) -> None:
         '''
         Recursively deletes a Port object.
         '''
@@ -900,7 +916,7 @@ class Port(CFSNode):
             r.delete()
         super().delete()
 
-    def _list_referrals(self):
+    def _list_referrals(self) -> Iterator[Referral]:
         '''
         Lists the referrals of the port.
         '''
@@ -911,7 +927,7 @@ class Port(CFSNode):
     referrals = property(_list_referrals,
                          doc="Get the list of Referrals for this Port.")
 
-    def _list_ana_groups(self):
+    def _list_ana_groups(self) -> Iterator[ANAGroup]:
         '''
         Lists the ANA groups of the port.
         '''
@@ -924,7 +940,7 @@ class Port(CFSNode):
                           doc="Get the list of ANA Groups for this Port.")
 
     @classmethod
-    def setup(cls, n, err_func):
+    def setup(cls, n: dict[str, Any], err_func: ErrFunc) -> None:
         '''
         Set up a Port object based upon n dict, from saved config.
         Guard against missing or bad dict items, but keep going.
@@ -949,7 +965,7 @@ class Port(CFSNode):
         for r in n.get('referrals', []):
             Referral.setup(port, r, err_func)
 
-    def dump(self):
+    def dump(self) -> dict[str, Any]:
         '''
         Returns a dict with the config of the object.
         '''
@@ -966,10 +982,10 @@ class Referral(CFSNode):
     This is an interface to a NVMe Referral in configFS.
     '''
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Referral {self.name}>"
 
-    def __init__(self, port, name, mode='any'):
+    def __init__(self, port: Port, name: str, mode: str = 'any') -> None:
         super().__init__()
 
         if not isinstance(port, Port):
@@ -981,7 +997,7 @@ class Referral(CFSNode):
         self._path = f"{self.port.path}/referrals/{self._name}"
         self._create_in_cfs(mode)
 
-    def _get_name(self):
+    def _get_name(self) -> str:
         '''
         Returns the name of the referral.
         '''
@@ -990,7 +1006,7 @@ class Referral(CFSNode):
     name = property(_get_name, doc="Get the Referral name.")
 
     @classmethod
-    def setup(cls, port, n, err_func):
+    def setup(cls, port: Port, n: dict[str, Any], err_func: ErrFunc) -> None:
         '''
         Set up a Referral based upon n dict, from saved config.
         Guard against missing or bad dict items, but keep going.
@@ -1009,7 +1025,7 @@ class Referral(CFSNode):
 
         r._setup_attrs(n, err_func)
 
-    def dump(self):
+    def dump(self) -> dict[str, Any]:
         '''
         Returns a dict with the config of the object.
         '''
@@ -1025,10 +1041,11 @@ class ANAGroup(CFSNode):
 
     MAX_GRPID = 1024
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<ANA Group {self.grpid}>"
 
-    def __init__(self, port, grpid, mode='any'):
+    def __init__(self, port: Port, grpid: int | None,
+                 mode: str = 'any') -> None:
         super().__init__()
 
         if not os.path.isdir(f"{port.path}/ana_groups"):
@@ -1056,7 +1073,7 @@ class ANAGroup(CFSNode):
         self._path = f"{self._port.path}/ana_groups/{self.grpid}"
         self._create_in_cfs(mode)
 
-    def _get_grpid(self):
+    def _get_grpid(self) -> int:
         '''
         Returns the ANA group ID.
         '''
@@ -1065,7 +1082,7 @@ class ANAGroup(CFSNode):
     grpid = property(_get_grpid, doc="Get the ANA Group ID.")
 
     @classmethod
-    def setup(cls, port, n, err_func):
+    def setup(cls, port: Port, n: dict[str, Any], err_func: ErrFunc) -> None:
         '''
         Set up an ANA Group object based upon n dict, from saved config.
         Guard against missing or bad dict items, but keep going.
@@ -1084,7 +1101,7 @@ class ANAGroup(CFSNode):
 
         a._setup_attrs(n, err_func)
 
-    def delete(self):
+    def delete(self) -> None:
         '''
         Deletes the ANA group.
         '''
@@ -1092,7 +1109,7 @@ class ANAGroup(CFSNode):
         if self.grpid != 1:
             super().delete()
 
-    def dump(self):
+    def dump(self) -> dict[str, Any]:
         '''
         Returns a dict with the config of the object.
         '''
@@ -1107,10 +1124,10 @@ class Host(CFSNode):
     A Host is identified by its NQN.
     '''
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Host {self.nqn}>"
 
-    def __init__(self, nqn, mode='any'):
+    def __init__(self, nqn: str, mode: str = 'any') -> None:
         '''
         @param nqn: The Hosts's NQN.
         @type nqn: string
@@ -1130,7 +1147,7 @@ class Host(CFSNode):
         self._create_in_cfs(mode)
 
     @classmethod
-    def setup(cls, t, err_func):
+    def setup(cls, t: dict[str, Any], err_func: ErrFunc) -> None:
         '''
         Set up Host objects based upon t dict, from saved config.
         Guard against missing or bad dict items, but keep going.
@@ -1149,7 +1166,7 @@ class Host(CFSNode):
 
         h._setup_attrs(t, err_func)
 
-    def dump(self):
+    def dump(self) -> dict[str, Any]:
         '''
         Returns a dict with the config of the object.
         '''
@@ -1158,7 +1175,7 @@ class Host(CFSNode):
         return d
 
 
-def _test():
+def _test() -> None:
     testmod()
 
 

@@ -24,3 +24,27 @@ test = [
     "nose2",
     "coverage"
 ]
+typecheck = [
+    "mypy"
+]
+
+[tool.mypy]
+files = ["nvmet", "nvmetcli"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_reexport = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unreachable = true
+warn_return_any = true
+strict_equality = true
+# Not full `strict = true`: configshell ships no type stubs, so its
+# ConfigNode is typed as Any, and disallow_subclassing_any would flag
+# every configshell.ConfigNode subclass in nvmetcli. Everything else
+# strict mode enables is clean and enforced above.
+
+[[tool.mypy.overrides]]
+module = "configshell.*"
+ignore_missing_imports = true

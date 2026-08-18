@@ -2,6 +2,8 @@
 Tests for the nvmet API.
 """
 
+from __future__ import annotations
+
 import os
 import random
 import stat
@@ -20,7 +22,7 @@ NVMET_TEST_DEVICES = os.getenv("NVMET_TEST_DEVICES",
 TEMP_BACKING_FILE_SIZE = 512 * 1024 * 1024
 
 
-def _is_usable_device(path):
+def _is_usable_device(path: str) -> bool:
     '''
     Return True if 'path' is usable as a namespace backing device (a
     block device or a regular file). Any OSError from stat() (missing
@@ -34,7 +36,7 @@ def _is_usable_device(path):
     return stat.S_ISBLK(st.st_mode) or stat.S_ISREG(st.st_mode)
 
 
-def _usable_devices():
+def _usable_devices() -> list[str]:
     '''
     Return the subset of NVMET_TEST_DEVICES that are usable as a
     namespace backing device.
@@ -42,7 +44,7 @@ def _usable_devices():
     return [x for x in NVMET_TEST_DEVICES if _is_usable_device(x)]
 
 
-def _make_temp_backing_file():
+def _make_temp_backing_file() -> str:
     '''
     Create a temporary sparse file suitable for use as a namespace
     backing file, equivalent to 'truncate --size=512M'.
@@ -53,7 +55,7 @@ def _make_temp_backing_file():
     return path
 
 
-def get_test_devices(count, testcase):
+def get_test_devices(count: int, testcase: unittest.TestCase) -> list[str]:
     '''
     Return a list of 'count' backing devices to use for namespaces.
 
@@ -73,7 +75,7 @@ class TestNvmet(unittest.TestCase):
     '''
     Tests for the nvmet API.
     '''
-    def test_subsystem(self):
+    def test_subsystem(self) -> None:
         '''
         Test Subsystem creation and deletion.
         '''
@@ -120,7 +122,7 @@ class TestNvmet(unittest.TestCase):
             s.delete()
         self.assertEqual(len(list(root.subsystems)), 0)
 
-    def test_namespace(self):
+    def test_namespace(self) -> None:
         '''
         Test Namespace creation and deletion.
         '''
@@ -174,7 +176,7 @@ class TestNvmet(unittest.TestCase):
             n.delete()
         self.assertEqual(len(list(s.namespaces)), 0)
 
-    def test_namespace_attrs(self):
+    def test_namespace_attrs(self) -> None:
         '''
         Test Namespace attributes.
         '''
@@ -215,7 +217,7 @@ class TestNvmet(unittest.TestCase):
         n.set_enable(1)
         n.delete()
 
-    def test_recursive_delete(self):
+    def test_recursive_delete(self) -> None:
         '''
         Test recursive deletion of a Subsystem.
         '''
@@ -229,7 +231,7 @@ class TestNvmet(unittest.TestCase):
         s.delete()
         self.assertEqual(len(list(root.subsystems)), 0)
 
-    def test_port(self):
+    def test_port(self) -> None:
         '''
         Test Port creation and deletion.
         '''
@@ -268,7 +270,7 @@ class TestNvmet(unittest.TestCase):
             p.delete()
         self.assertEqual(len(list(root.ports)), 0)
 
-    def test_loop_port(self):
+    def test_loop_port(self) -> None:
         '''
         Test loop port functionality.
         '''
@@ -324,7 +326,7 @@ class TestNvmet(unittest.TestCase):
         p.add_subsystem('testnqn')
         p.delete()
 
-    def test_host(self):
+    def test_host(self) -> None:
         '''
         Test Host creation and deletion.
         '''
@@ -363,7 +365,7 @@ class TestNvmet(unittest.TestCase):
             h.delete()
         self.assertEqual(len(list(root.hosts)), 0)
 
-    def test_referral(self):
+    def test_referral(self) -> None:
         '''
         Test Referral creation and deletion.
         '''
@@ -449,7 +451,7 @@ class TestNvmet(unittest.TestCase):
         r1.delete()
         self.assertEqual(len(list(p.referrals)), 0)
 
-    def test_allowed_hosts(self):
+    def test_allowed_hosts(self) -> None:
         '''
         Test allowed hosts functionality.
         '''
@@ -477,7 +479,7 @@ class TestNvmet(unittest.TestCase):
         # invalid removal
         self.assertRaises(nvme.CFSError, s.remove_allowed_host, 'foobar')
 
-    def test_invalid_input(self):
+    def test_invalid_input(self) -> None:
         '''
         Test invalid input to the API.
         '''
@@ -502,7 +504,7 @@ class TestNvmet(unittest.TestCase):
         self.assertRaises(nvme.CFSError, nvme.Port,
                           portid=1 << 17, mode='create')
 
-    def test_save_restore(self):
+    def test_save_restore(self) -> None:
         '''
         Test save and restore functionality.
         '''
