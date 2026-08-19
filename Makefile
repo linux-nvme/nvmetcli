@@ -19,7 +19,7 @@ all:
 	@echo "  make uninstalldoc  - Uninstall man pages (need sudo)."
 
 test:
-	@coverage run --source=nvmet -m nose2; ret=$$?; coverage report; exit $$ret
+	@python3 -m coverage run --source=nvmet -m nose2; ret=$$?; python3 -m coverage report; exit $$ret
 
 doc: ${NAME}
 	${MAKE} -C ${DOCDIR}
