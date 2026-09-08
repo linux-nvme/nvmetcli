@@ -8,7 +8,7 @@ version = "0.9"
 description = "NVMe target configuration tool"
 dependencies = ["configshell-fb>=2.0"]
 license = "Apache-2.0"
-license-files = ["LICENSE"]
+license-files = ["COPYING"]
 requires-python = ">=3.10"
 maintainers = [
     { name = "Christoph Hellwig", email = "hch@lst.de" },
